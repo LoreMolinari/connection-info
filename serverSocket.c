@@ -7,7 +7,7 @@ int main(int argc, char * argv) {
 
     local.sin_family = AF_INET;
     local.sin_port = htons(8080);
-    local.sin_address.s_addr = INADDR_ANY
+    local.sin_address.s_addr = inet_addr("127.0.0.");
 
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     //faccio il controllo sul socket
