@@ -29,6 +29,8 @@ int main() {
     if(listen(serverdescriptor, LISTEN) < 0) die("listen() error");
     printf("listen ok.\n");
 
+    char choice[10];
+
     while(1) {
 
         int clientdescriptor = accept(serverdescriptor, NULL, NULL);
@@ -46,21 +48,27 @@ int main() {
             //Processo figlio: chiudo il socket master
             close(serverdescriptor);
 
-            //Gestione del client acquisisto
-            char scelta[10];
-            recv(serverdescriptor, &scelta, sizeof(scelta), 0);
+            memset(choice, 0, 10);
 
-            if (strcmp(scelta, "parametri") == 0) {
+            //Gestione del client acquisito
+            printf("In attesa della scelta del client\n");
+            recv(clientdescriptor, &choice, sizeof(choice), 0);
+            printf("Scelta selezionata: %s\n", choice);
+
+            if (strcmp(choice, "parametri") == 0) {
+                printf("Gestione del servizio paramentri\n");
                 extract_param(clientdescriptor);
-            } else if (strcmp(scelta, "info") == 0) {
+            } else if (strcmp(choice, "info") == 0) {
+                printf("Gestione del servizio info\n");
                 extract_info(clientdescriptor);
-            } else if (strcmp(scelta, "simula") == 0) {
+            } else if (strcmp(choice, "simula") == 0) {
+                printf("Gestione del servizio simula\n");
                 simulation(clientdescriptor); 
             } else {
                 char *msg = "Questa funzione non è stata implementata";
                 send(clientdescriptor, &msg, sizeof(msg), 0);
             }
-
+            
             exit(0);
         }
 
