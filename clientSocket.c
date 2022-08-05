@@ -3,12 +3,12 @@
 #include <stdio.h>
 
 int main(int argc, char * argv){
-    //DEFINIZIONE VARIABILI
+    //definizione variabili
     struct sockaddr_in local, client;
 
     local.sin_family = AF_INET;
-    local.sin_port = htons(ServPort);
-    local.sin_address.s_addr = inet_addr(ServIP)
+    local.sin_port = htons(8080);
+    local.sin_address.s_addr = inet_addr("127.0.0.");
 
     //inizializzazione Socket
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
