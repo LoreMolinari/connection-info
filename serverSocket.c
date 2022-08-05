@@ -6,7 +6,7 @@ int main(int argc, char * argv) {
     struct sockaddr_in local, client;
 
     local.sin_family = AF_INET;
-    local.sin_port = htons(8080);d
+    local.sin_port = htons(8080);
     local.sin_address.s_addr = INADDR_ANY
 
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
