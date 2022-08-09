@@ -5,10 +5,16 @@
 #include <netinet/in.h>;
 
 #define PORT 8080
+#define MAXLEN 255
 
 void die(char *);
 
 int main() {
+
+    char sendbuff[MAXLEN];
+    char recvbuff[MAXLEN];
+    memset(sendbuff, 0, MAXLEN);
+    memset(recvbuff, 0, MAXLEN);
 
     struct sockaddr_in local;
     int socketdescriptor = socket(AF_INET, SOCK_STREAM, 0);
@@ -24,16 +30,50 @@ int main() {
 
     while(1) {
 
-        char choice[40];
-        printf("Scegliere il metodo da eseguire: (parametri, info, simula)\n");
-        scanf("%s", choice);
-        printf("Scelta selezionata: %s.\n", choice);
-        send(socketdescriptor, &choice, sizeof(choice), 0);
+        printf("Scegliere il metodo da eseguire: (throughput = T)\n");
+        scanf("%s", sendbuff);
+        send(socketdescriptor, &sendbuff, MAXLEN, 0);
+
+        if (strcmp(sendbuff, "T") == 0) {
+            printf("Gestione del servizio: calcolo del throughput\n");
+            throughput(socketdescriptor); 
+        } else {
+            printf("Questa funzione non è stata implementata\n");
+        }
 
     }
 
     close(socketdescriptor);
     return 0;
+
+}
+
+
+void throughput(int socketdescriptor) {
+    
+    char sendbuff[MAXLEN];
+    char recvbuff[MAXLEN];
+    memset(sendbuff, 0, MAXLEN);
+    memset(recvbuff, 0, MAXLEN);
+
+    int bandaNominale = 0;
+    int throughput = 0;
+
+    printf("Inserire il valore della banda nominale (in Mbps): ");
+    scanf("%d", &bandaNominale);
+    send(socketdescriptor, &bandaNominale, MAXLEN, 0);
+
+    printf("Protocollo utilizzato (TCP/UDP): ");
+    scanf("%s", sendbuff);
+    send(socketdescriptor, &sendbuff, MAXLEN, 0);
+
+    if (strcmp(sendbuff, "TCP") == 0 || strcmp(sendbuff, "UDP") == 0) {
+        printf("Valore del throughput (in Mbps): ");
+        recv(socketdescriptor, &throughput, sizeof(int), 0);
+        printf("%d\n", throughput);
+    } else {
+        printf("Scelta non possibile\n");
+    }
 
 }
 

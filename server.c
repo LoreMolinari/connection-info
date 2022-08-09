@@ -6,13 +6,15 @@
 
 #define PORT 8080
 #define LISTEN 5
+#define MAXLEN 255
 
 void die(char *);
-void extract_param(int);
-void extract_info(int);
-void simulation(int);
+void throughput(int);
 
 int main() {
+
+    char recvbuff[MAXLEN];
+    memset(recvbuff, 0, MAXLEN);
 
     struct sockaddr_in local;
     int serverdescriptor = socket(AF_INET, SOCK_STREAM, 0);
@@ -47,27 +49,18 @@ int main() {
         } else {
             //Processo figlio: chiudo il socket master
             close(serverdescriptor);
-
             memset(choice, 0, 10);
 
             //Gestione del client acquisito
             printf("In attesa della scelta del client\n");
-            recv(clientdescriptor, &choice, sizeof(choice), 0);
-            printf("Scelta selezionata: %s\n", choice);
+            recv(clientdescriptor, &recvbuff, MAXLEN, 0);
 
-            if (strcmp(choice, "parametri") == 0) {
-                printf("Gestione del servizio paramentri\n");
-                extract_param(clientdescriptor);
-            } else if (strcmp(choice, "info") == 0) {
-                printf("Gestione del servizio info\n");
-                extract_info(clientdescriptor);
-            } else if (strcmp(choice, "simula") == 0) {
-                printf("Gestione del servizio simula\n");
-                simulation(clientdescriptor); 
-            } else {
-                char *msg = "Questa funzione non è stata implementata";
-                send(clientdescriptor, &msg, sizeof(msg), 0);
+            if (strcmp(recvbuff, "T") == 0) {
+                printf("Gestione del servizio: calcolo del throughput\n");
+                throughput(clientdescriptor); 
             }
+
+            printf("Servizio terminato\n");
             
             exit(0);
         }
@@ -80,45 +73,34 @@ int main() {
 }
 
 
-void extract_param(int clientdescriptor) {
-    char *msg = "Verranno estratti i parametri della tua connessione";
-    send(clientdescriptor, &msg, sizeof(msg), 0);
+void throughput(int clientdescriptor) {
+    
+    char recvbuff[MAXLEN];
+    memset(recvbuff, 0, MAXLEN);
 
-    //Qui dobbiamo calcolare parametri come pdu, cogwind, ecc...
-}
+    int bandaNominale = 0;
+    int throughput = 0;
+    int overheadEthernet = 18;
+    int overheadIp = 20;
+    int frameEthernet = 1500;
+    int overheadTCP = 20;
+    int overheadUDP = 8;
 
+    recv(clientdescriptor, &bandaNominale, sizeof(int), 0);
+    recv(clientdescriptor, recvbuff, MAXLEN, 0);
 
-void extract_info(int clientdescriptor) {
-    char * msg = "Verranno estratti le informazioni della tua connessione";
-    send(clientdescriptor, &msg, sizeof(msg), 0);
+    printf("%s\n", recvbuff); //provvisorio
 
-    //Qui dobbiamo inviare al client i parametri tipo ip, porta, velocità, ecc...
-}
+    if (strcmp(recvbuff, "TCP") == 0) {
+        throughput = (frameEthernet - (overheadTCP + overheadIp)) / (frameEthernet + overheadEthernet);
+        throughput = throughput/100 * bandaNominale;
+    } else if (strcmp(recvbuff, "UDP") == 0) {
+        throughput = (frameEthernet - (overheadUDP + overheadIp)) / (frameEthernet + overheadEthernet);
+        throughput = throughput/100 * bandaNominale;
+    }
 
-
-void simulation(int clientdescriptor){
-
-    //privvisorio
-    int ip, v, conn;
-
-    char * msg = "Simuleremo i parametri di una possibile connessione";
-    send(clientdescriptor, &msg, sizeof(msg), 0);
-
-    msg = "Inserire il possibile ip da utilizzare";
-    send(clientdescriptor, &msg, sizeof(msg), 0);
-    recv(clientdescriptor, &ip, sizeof(ip), 0);
-
-    msg = "Inserire la velocità della connessione";
-    send(clientdescriptor, &msg, sizeof(msg), 0);
-    recv(clientdescriptor, &v, sizeof(v), 0);
-
-    msg = "Inserire la tipologia di connessione che si sta utilizzando";
-    send(clientdescriptor, &msg, sizeof(msg), 0);
-    recv(clientdescriptor, &conn, sizeof(conn), 0);
-
-    //ecc..
-
-    //poi creeremo un altra funzione extracr param che con i parametri della simulazione darà pdu, cogwind, ecc... della connesione simulata
+    printf("%d\n", throughput); //provvisorio
+    send(clientdescriptor, &throughput, sizeof(throughput), 0);
 }
 
 
