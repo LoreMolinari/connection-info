@@ -1,10 +1,10 @@
-#include <stdio.h>;
-#include <stdlib.h>;
-#include <string.h>;
-#include <sys/socket.h>;
-#include <netinet/in.h>;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
-#define PORT 8080
+#define PORT 8989
 #define LISTEN 5
 #define MAXLEN 255
 
@@ -76,7 +76,7 @@ int main() {
 void throughput(int clientdescriptor) {
     
     char recvbuff[MAXLEN];
-    memset(recvbuff, 0, MAXLEN);
+    //memset(recvbuff, 0, MAXLEN);
 
     int bandaNominale = 0;
     int throughput = 0;
@@ -85,11 +85,12 @@ void throughput(int clientdescriptor) {
     int frameEthernet = 1500;
     int overheadTCP = 20;
     int overheadUDP = 8;
+    
 
     recv(clientdescriptor, &bandaNominale, sizeof(int), 0);
-    recv(clientdescriptor, recvbuff, MAXLEN, 0);
-
-    printf("%s\n", recvbuff); //provvisorio
+    printf("Banda nominale: %d\n", bandaNominale); //pv
+    recv(clientdescriptor, &recvbuff, MAXLEN, 0);
+    printf("Protocollo: %s\n", recvbuff);   //pv
 
     if (strcmp(recvbuff, "TCP") == 0) {
         throughput = (frameEthernet - (overheadTCP + overheadIp)) / (frameEthernet + overheadEthernet);
@@ -101,6 +102,7 @@ void throughput(int clientdescriptor) {
 
     printf("%d\n", throughput); //provvisorio
     send(clientdescriptor, &throughput, sizeof(throughput), 0);
+
 }
 
 

@@ -1,10 +1,10 @@
-#include <stdio.h>;
-#include <stdlib.h>;
-#include <string.h>;
-#include <sys/socket.h>;
-#include <netinet/in.h>;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
-#define PORT 8080
+#define PORT 8989
 #define MAXLEN 255
 
 void die(char *);
@@ -61,10 +61,10 @@ void throughput(int socketdescriptor) {
 
     printf("Inserire il valore della banda nominale (in Mbps): ");
     scanf("%d", &bandaNominale);
-    send(socketdescriptor, &bandaNominale, MAXLEN, 0);
+    send(socketdescriptor, &bandaNominale, sizeof(int), 0);
 
     printf("Protocollo utilizzato (TCP/UDP): ");
-    scanf("%s", sendbuff);
+    scanf("%s", &sendbuff);
     send(socketdescriptor, &sendbuff, MAXLEN, 0);
 
     if (strcmp(sendbuff, "TCP") == 0 || strcmp(sendbuff, "UDP") == 0) {
