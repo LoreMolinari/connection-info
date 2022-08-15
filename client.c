@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define PORT 8989
+#define PORT 9090
 #define MAXLEN 255
 
 void die(char *);
@@ -30,14 +30,17 @@ int main() {
 
     while(1) {
 
-        printf("Scegliere il metodo da eseguire: (throughput = T)\n");
+        printf("Scegliere il metodo da eseguire: (throughput = T) (Efficenza del canale e tasso utilizzo = U)\n");
         scanf("%s", sendbuff);
         send(socketdescriptor, &sendbuff, MAXLEN, 0);
 
         if (strcmp(sendbuff, "T") == 0) {
             printf("Gestione del servizio: calcolo del throughput\n");
             throughput(socketdescriptor); 
-        } else {
+        } else if(strcmp(sendbuff, "U") == 0){
+            printf("Gestione del servizio: calcolo dell'efficenza\n");
+            channelEfficency(socketdescriptor); 
+        }else {
             printf("Questa funzione non è stata implementata\n");
         }
 
@@ -57,7 +60,7 @@ void throughput(int socketdescriptor) {
     memset(recvbuff, 0, MAXLEN);
 
     int bandaNominale = 0;
-    int throughput = 0;
+    float throughput = 0;
 
     printf("Inserire il valore della banda nominale (in Mbps): ");
     scanf("%d", &bandaNominale);
@@ -69,12 +72,41 @@ void throughput(int socketdescriptor) {
 
     if (strcmp(sendbuff, "TCP") == 0 || strcmp(sendbuff, "UDP") == 0) {
         printf("Valore del throughput (in Mbps): ");
-        recv(socketdescriptor, &throughput, sizeof(int), 0);
-        printf("%d\n", throughput);
+        recv(socketdescriptor, &throughput, sizeof(float), 0);
+        printf("%f\n", throughput);
     } else {
         printf("Scelta non possibile\n");
     }
 
+}
+
+void channelEfficency(int socketdescriptor){
+
+    int TIX = 0;
+    int Tt = 0;
+    int RTT = 0;
+    int U = 0;
+    float TassoU = 0;
+
+    printf("Inserire il tempo di invio del pacchetto: ");
+    scanf("%d", &TIX);
+    send(socketdescriptor, &TIX, sizeof(int), 0);
+
+    printf("Inserire il tempo che intercorre tra un invio di un frame e il successivo: ");
+    scanf("%d", &Tt);
+    send(socketdescriptor, &Tt, sizeof(int), 0);
+
+    printf("Inserire il tempo di propagazione del canale (RTT): ");
+    scanf("%d", &RTT);
+    send(socketdescriptor, &RTT, sizeof(int), 0);
+
+    printf("Valore dell'efficenza di utilizzo del canale: ");
+    recv(socketdescriptor, &U, sizeof(int), 0);
+    printf("%d\n", U);
+
+    printf("Valore del tasso di utilizzo del canale: ");
+    recv(socketdescriptor, &TassoU, sizeof(float), 0);
+    printf("%5.2f %\n", TassoU);
 }
 
 
