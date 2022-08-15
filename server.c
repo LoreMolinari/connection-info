@@ -4,7 +4,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define PORT 8989
+#define PORT 9090
 #define LISTEN 5
 #define MAXLEN 255
 
@@ -42,7 +42,7 @@ int main() {
         int pid = fork();
 
         if (pid < 0) {
-            die("frok() error"); 
+            die("fork() error"); 
         } else if (pid > 0) {
             //Processo padre: chiudo il socket slave
             close(clientdescriptor); 
@@ -51,17 +51,23 @@ int main() {
             close(serverdescriptor);
             memset(choice, 0, 10);
 
-            //Gestione del client acquisito
-            printf("In attesa della scelta del client\n");
-            recv(clientdescriptor, &recvbuff, MAXLEN, 0);
+            printf("Client %d connesso\n",clientdescriptor); //stampo id del socket
 
-            if (strcmp(recvbuff, "T") == 0) {
-                printf("Gestione del servizio: calcolo del throughput\n");
-                throughput(clientdescriptor); 
+            while(1){
+                //Gestione del client acquisito
+                printf("In attesa della scelta del client\n");
+                recv(clientdescriptor, &recvbuff, MAXLEN, 0);
+
+                if (strcmp(recvbuff, "T") == 0) {
+                    //printf("Gestione del servizio: calcolo del throughput\n");
+                    throughput(clientdescriptor); 
+                }else if(strcmp(recvbuff, "U") == 0){
+                    //printf("Gestione del servizio: calcolo dell'efficenza\n");
+                    channelEfficency(clientdescriptor); 
+                }
             }
 
             printf("Servizio terminato\n");
-            
             exit(0);
         }
 
@@ -76,10 +82,10 @@ int main() {
 void throughput(int clientdescriptor) {
     
     char recvbuff[MAXLEN];
-    //memset(recvbuff, 0, MAXLEN);
+    memset(recvbuff, 0, MAXLEN);
 
     int bandaNominale = 0;
-    int throughput = 0;
+    float throughput = 0;
     int overheadEthernet = 18;
     int overheadIp = 20;
     int frameEthernet = 1500;
@@ -88,21 +94,45 @@ void throughput(int clientdescriptor) {
     
 
     recv(clientdescriptor, &bandaNominale, sizeof(int), 0);
-    printf("Banda nominale: %d\n", bandaNominale); //pv
+    //printf("Banda nominale: %d\n", bandaNominale); //pv
     recv(clientdescriptor, &recvbuff, MAXLEN, 0);
-    printf("Protocollo: %s\n", recvbuff);   //pv
+    //printf("Protocollo: %s\n", recvbuff);   //pv
 
     if (strcmp(recvbuff, "TCP") == 0) {
-        throughput = (frameEthernet - (overheadTCP + overheadIp)) / (frameEthernet + overheadEthernet);
-        throughput = throughput/100 * bandaNominale;
+        throughput = (float)(frameEthernet - (overheadTCP + overheadIp)) / (float)(frameEthernet + overheadEthernet);
+        throughput = throughput * (float)bandaNominale;
     } else if (strcmp(recvbuff, "UDP") == 0) {
-        throughput = (frameEthernet - (overheadUDP + overheadIp)) / (frameEthernet + overheadEthernet);
-        throughput = throughput/100 * bandaNominale;
+        throughput = (float)(frameEthernet - (overheadUDP + overheadIp)) / (float)(frameEthernet + overheadEthernet);
+        throughput = throughput * (float)bandaNominale;
     }
 
-    printf("%d\n", throughput); //provvisorio
-    send(clientdescriptor, &throughput, sizeof(throughput), 0);
+    //printf("%f\n", throughput); //provvisorio
+    send(clientdescriptor, &throughput, sizeof(float), 0);
 
+}
+
+void channelEfficency (int clientdescriptor){
+
+    int TIX = 0;
+    int Tt = 0;
+    int RTT = 0;
+    int U = 0;
+    float TassoU = 0;
+
+    recv(clientdescriptor, &TIX, sizeof(int), 0);
+    //printf("Tempo di invio del pacchetto: %d\n", TIX); //pv
+    recv(clientdescriptor, &Tt, sizeof(int), 0);
+    //printf("Tempo tra invio di un frame e il successivo: %d\n", Tt);   //pv
+    recv(clientdescriptor, &RTT, sizeof(int), 0);
+    //printf("Tempo di propagazione: %d\n", Tt);   //pv
+
+
+    U = TIX/Tt;
+    TassoU = ((float)TIX/(float)(TIX+2*RTT))*100;
+
+    //printf("%d\n%f\n", U, TassoU); //provvisorio
+    send(clientdescriptor, &U, sizeof(int), 0);
+    send(clientdescriptor, &TassoU, sizeof(float), 0);
 }
 
 
