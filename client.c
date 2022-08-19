@@ -30,7 +30,7 @@ int main() {
 
     while(1) {
 
-        printf("Scegliere il metodo da eseguire: (throughput = T) (Efficenza del canale e tasso utilizzo = U)\n");
+        printf("Scegliere il metodo da eseguire: (throughput = T) (Efficenza del canale e tasso utilizzo = U) (Advertised Window = A) (Timeout = R)\n");
         scanf("%s", sendbuff);
         send(socketdescriptor, &sendbuff, MAXLEN, 0);
 
@@ -40,6 +40,12 @@ int main() {
         } else if(strcmp(sendbuff, "U") == 0){
             printf("Gestione del servizio: calcolo dell'efficenza\n");
             channelEfficency(socketdescriptor); 
+        } else if(strcmp(sendbuff, "A") == 0){
+            printf("Gestione del servizio: calcolo della finestra ottimale\n");
+            avertisedWindow(socketdescriptor); 
+        }else if(strcmp(sendbuff, "R") == 0){
+            printf("Gestione del servizio: calcolo del timeout\n");
+            RTT(socketdescriptor); 
         }else {
             printf("Questa funzione non è stata implementata\n");
         }
@@ -73,9 +79,9 @@ void throughput(int socketdescriptor) {
     if (strcmp(sendbuff, "TCP") == 0 || strcmp(sendbuff, "UDP") == 0) {
         printf("Valore del throughput (in Mbps): ");
         recv(socketdescriptor, &throughput, sizeof(float), 0);
-        printf("%f\n", throughput);
+        printf("%f\n\n", throughput);
     } else {
-        printf("Scelta non possibile\n");
+        printf("Scelta non possibile\n\n");
     }
 
 }
@@ -106,7 +112,51 @@ void channelEfficency(int socketdescriptor){
 
     printf("Valore del tasso di utilizzo del canale: ");
     recv(socketdescriptor, &TassoU, sizeof(float), 0);
-    printf("%5.2f %\n", TassoU);
+    printf("%5.2f %\n\n", TassoU);
+}
+
+void avertisedWindow(int socketdescriptor){
+
+    int RTT = 0;
+    int width = 0;
+    int AW = 0;
+
+    printf("Inserire il tempo di propagazione del canale(RTT): ");
+    scanf("%d", &RTT);
+    send(socketdescriptor, &RTT, sizeof(int),0);
+    
+    printf("Inserire la larghezza di banda del canale: ");
+    scanf("%d", &width);
+    send(socketdescriptor, &width, sizeof(int), 0);
+
+    printf("Il valore della finestra ottimale è: ");
+    recv(socketdescriptor, &AW, sizeof(int), 0);
+    printf("%d\n\n", AW);
+}
+
+void RTT(int socketdescriptor){
+    
+    int currentTime = 0;
+    int sendTime = 0;
+
+    float EstimatedRTT = 1;
+    float Timeout = 0;
+    float Error = 0;
+
+    printf("Inserire il tempo corrente: ");
+    scanf("%d", &currentTime);
+    send(socketdescriptor, &currentTime, sizeof(int),0);
+
+    printf("Inserire il tempo di invio del pacchetto: ");
+    scanf("%d", &sendTime);
+    send(socketdescriptor, &sendTime, sizeof(int),0);
+
+    
+    recv(socketdescriptor, &EstimatedRTT, sizeof(float), 0);
+    recv(socketdescriptor, &Error, sizeof(float), 0);
+    recv(socketdescriptor, &Timeout, sizeof(float), 0);
+    printf("Estimated RTT: %5.2f,\t Errore: %5.2f,\t Timeout: %5.2f\n\n", EstimatedRTT, Error, Timeout);
+
 }
 
 

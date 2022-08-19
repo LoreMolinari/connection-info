@@ -54,8 +54,9 @@ int main() {
             printf("Client %d connesso\n",clientdescriptor); //stampo id del socket
 
             while(1){
+                if(clientdescriptor < 0) die("Client disconnected");
                 //Gestione del client acquisito
-                printf("In attesa della scelta del client\n");
+                printf("In attesa della scelta del client\n\n");
                 recv(clientdescriptor, &recvbuff, MAXLEN, 0);
 
                 if (strcmp(recvbuff, "T") == 0) {
@@ -64,6 +65,12 @@ int main() {
                 }else if(strcmp(recvbuff, "U") == 0){
                     //printf("Gestione del servizio: calcolo dell'efficenza\n");
                     channelEfficency(clientdescriptor); 
+                }else if(strcmp(recvbuff, "A") == 0){
+                    //printf("Gestione del servizio: calcolo della finestra ottimale\n");
+                    avertisedWindow(clientdescriptor); 
+                }else if(strcmp(recvbuff, "R") == 0){
+                    //printf("Gestione del servizio: calcolo del timeout\n");
+                    RTT(clientdescriptor); 
                 }
             }
 
@@ -124,7 +131,7 @@ void channelEfficency (int clientdescriptor){
     recv(clientdescriptor, &Tt, sizeof(int), 0);
     //printf("Tempo tra invio di un frame e il successivo: %d\n", Tt);   //pv
     recv(clientdescriptor, &RTT, sizeof(int), 0);
-    //printf("Tempo di propagazione: %d\n", Tt);   //pv
+    //printf("Tempo di propagazione: %d\n", RTT);   //pv
 
 
     U = TIX/Tt;
@@ -133,6 +140,62 @@ void channelEfficency (int clientdescriptor){
     //printf("%d\n%f\n", U, TassoU); //provvisorio
     send(clientdescriptor, &U, sizeof(int), 0);
     send(clientdescriptor, &TassoU, sizeof(float), 0);
+}
+
+void avertisedWindow(int clientdescriptor){
+
+    int RTT = 0;
+    int width = 0;
+    int AW = 0;
+
+    recv(clientdescriptor, &RTT, sizeof(int),0);
+    //printf("Tempo di propagazione (RTT): %d\n", RTT);
+    
+    recv(clientdescriptor, &width, sizeof(int), 0);
+    //printf("Larghezza banda del canale: %d\n", width);
+
+    AW = RTT * width;
+
+    //printf("Il valore della finestra ottimale è: %d\n",AW);
+    send(clientdescriptor, &AW, sizeof(int), 0);
+}
+
+void RTT(int clientdescriptor){
+    
+    int currentTime = 0;
+    int sendTime = 0;
+    int SampleRTT = 0;
+    float EstimatedRTT = 1;
+    float x = 0.1;
+    float Deviation = 0;
+    float Timeout = 0;
+    float Error = 0;
+    float h = 0.25;
+    
+    recv(clientdescriptor, &currentTime, sizeof(int),0);
+    printf("Tempo corrente: %d\n", currentTime);
+
+    recv(clientdescriptor, &sendTime, sizeof(int),0);
+    printf("Tempo invio: %d\n", sendTime);
+
+    SampleRTT = currentTime - sendTime;
+
+    EstimatedRTT = ((1-x)*EstimatedRTT)+(x*(float)SampleRTT);
+
+    Error = SampleRTT - EstimatedRTT;
+    if(Error<0){
+        Error = -Error;
+    }
+
+    Deviation = Deviation + h*(Error-Deviation);
+
+    Timeout = EstimatedRTT + 4*Deviation;
+
+    printf("Estimated RTT: %f,\t Errore: %f,\t Timeout: %f\n", EstimatedRTT, Error, Timeout);
+    send(clientdescriptor, &EstimatedRTT, sizeof(float), 0);
+    send(clientdescriptor, &Error, sizeof(float), 0);
+    send(clientdescriptor, &Timeout, sizeof(float), 0);
+
 }
 
 
