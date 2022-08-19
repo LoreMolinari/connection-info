@@ -173,10 +173,10 @@ void RTT(int clientdescriptor){
     float h = 0.25;
     
     recv(clientdescriptor, &currentTime, sizeof(int),0);
-    printf("Tempo corrente: %d\n", currentTime);
+    //printf("Tempo corrente: %d\n", currentTime);
 
     recv(clientdescriptor, &sendTime, sizeof(int),0);
-    printf("Tempo invio: %d\n", sendTime);
+    //printf("Tempo invio: %d\n", sendTime);
 
     SampleRTT = currentTime - sendTime;
 
@@ -191,7 +191,7 @@ void RTT(int clientdescriptor){
 
     Timeout = EstimatedRTT + 4*Deviation;
 
-    printf("Estimated RTT: %f,\t Errore: %f,\t Timeout: %f\n", EstimatedRTT, Error, Timeout);
+    //printf("Estimated RTT: %f,\t Errore: %f,\t Timeout: %f\n", EstimatedRTT, Error, Timeout);
     send(clientdescriptor, &EstimatedRTT, sizeof(float), 0);
     send(clientdescriptor, &Error, sizeof(float), 0);
     send(clientdescriptor, &Timeout, sizeof(float), 0);
