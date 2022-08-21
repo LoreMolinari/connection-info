@@ -36,7 +36,7 @@ int main() {
         int clientdescriptor = accept(serverdescriptor, NULL, NULL);
         if (clientdescriptor < 0) die("accept() error.\n");
         printf("accept() ok.\n");
-        printf("------- new client connected. -------\n");
+        printf("####### new client connected. #######\n");
 
         pid_t pid = fork();
 
@@ -47,7 +47,7 @@ int main() {
         } else if (pid == 0) {
             close(serverdescriptor);
             handleClient(clientdescriptor);
-            printf("------- client disconnected. -------\n");
+            printf("####### client disconnected. #######\n");
             close(clientdescriptor);
             exit(0);
         }
@@ -65,20 +65,20 @@ void handleClient(int clientdescriptor) {
     char recvbuff[MAXLEN];
     memset(recvbuff, 0, MAXLEN);
 
-    int check = 0;
+    int exit = 0;
 
-    while(!check) {
+    while(!exit) {
 
         //acquisizione della scelta del servizio del client
         recv(clientdescriptor, &recvbuff, MAXLEN, 0); 
 
         if (strcmp(recvbuff, "T") == 0) {
-            check = 1;
+            exit = 0;
             throughput(clientdescriptor); 
         } else if (strcmp(recvbuff, "E") == 0) {
-            check = 1;
+            exit = 1;
         } else {
-            check = 0;
+            exit = 0;
         }
 
     }
@@ -123,6 +123,7 @@ void throughput(int clientdescriptor) {
         } else {
             check = 0;
         }
+
     }
 
     //invio del valore del throughput calcolato in base ai parametri ricevuti

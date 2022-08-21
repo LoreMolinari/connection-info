@@ -44,7 +44,7 @@ void handleClient(int clientdescriptor) {
 
     int exit = 0;
 
-    while(1 && !exit) {
+    while(!exit) {
 
         printf("Scegliere il metodo da eseguire: (throughput = T) (exit = E)\n");
         scanf("%s", sendbuff);
@@ -53,9 +53,10 @@ void handleClient(int clientdescriptor) {
         send(clientdescriptor, &sendbuff, MAXLEN, 0);
 
         if (strcmp(sendbuff, "T") == 0) {
-            printf("\nCalcolo del throughput -------------------------------------\n");
+            printf("\n########################################################################\n");
+            printf("Calcolo del throughput\n");
             throughput(clientdescriptor); 
-            printf("------------------------------------------------------------\n\n");
+            printf("########################################################################\n\n");
         } else if (strcmp(sendbuff, "E") == 0) {
             exit = 1;
         } else {
