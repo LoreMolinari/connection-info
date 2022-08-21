@@ -74,7 +74,10 @@ void handleClient(int clientdescriptor) {
 
         if (strcmp(recvbuff, "T") == 0) {
             exit = 0;
-            throughput(clientdescriptor); 
+            throughput(clientdescriptor);
+        } else if (strcmp(recvbuff, "I") == 0) {
+            exit = 0;
+            idleRQ(clientdescriptor);
         } else if (strcmp(recvbuff, "E") == 0) {
             exit = 1;
         } else {
@@ -128,6 +131,45 @@ void throughput(int clientdescriptor) {
 
     //invio del valore del throughput calcolato in base ai parametri ricevuti
     send(clientdescriptor, &throughput, sizeof(float), 0);
+
+}
+
+
+//funzione per il calcolo dell’efficienza di utilizzo e della finestra ottimale in idleRQ
+void idleRQ(int clientdescriptor) {
+
+    float Tix = 0; //tempo di trasmissione del frame
+    float Tp = 0; //ritardo di propagazione
+    float Tt = 0; //tempo totale che intercorre tra l’invio di un frame e il successivo
+    float d = 0;
+    float U = 0; //efficienza di utilizzo
+    int frame = 0; //dimensione del frame 
+
+    float band = 0;
+    float window =  0;
+
+    //acquisizione della dimensione del frame ethernet
+    recv(clientdescriptor, &frame, sizeof(int), 0);
+
+    //acquisizione del valore della distanza
+    recv(clientdescriptor, &d, sizeof(float), 0);
+
+    //acquisizione del valore della banda
+    recv(clientdescriptor, &band, sizeof(float), 0);
+
+    Tix = (float)frame/band;
+    Tp = d/band;
+
+    Tt = Tix + 2*Tp;
+    U = Tix/(Tix + 2*Tp);
+
+    window = Tt * band;
+
+    //invio del valore dell'efficienza calcolato in base ai parametri ricevuti
+    send(clientdescriptor, &U, sizeof(float), 0);
+
+    //invio del valore della finestra ottimale calcolato in base ai parametri ricevuti
+    send(clientdescriptor, &window, sizeof(float), 0);
 
 }
 

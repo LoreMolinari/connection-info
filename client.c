@@ -11,6 +11,7 @@
 void die(char *);
 void handleClient(int);
 void throughput(int);
+void idleRQ(int);
 
 int main() {
 
@@ -46,7 +47,7 @@ void handleClient(int clientdescriptor) {
 
     while(!exit) {
 
-        printf("Scegliere il metodo da eseguire: (throughput = T) (exit = E)\n");
+        printf("Scegliere il metodo da eseguire: (throughput = T) (idleRQ = I) (exit = E)\n");
         scanf("%s", sendbuff);
 
         //invio della scelta del servizio da parte del client
@@ -56,6 +57,11 @@ void handleClient(int clientdescriptor) {
             printf("\n########################################################################\n");
             printf("Calcolo del throughput\n");
             throughput(clientdescriptor); 
+            printf("########################################################################\n\n");
+        } else if (strcmp(sendbuff, "I") == 0) {
+            printf("\n########################################################################\n");
+            printf("Calcolo del idleRQ\n");
+            idleRQ(clientdescriptor); 
             printf("########################################################################\n\n");
         } else if (strcmp(sendbuff, "E") == 0) {
             exit = 1;
@@ -72,10 +78,7 @@ void handleClient(int clientdescriptor) {
 void throughput(int clientdescriptor) {
 
     char sendbuff[MAXLEN];
-    char recvbuff[MAXLEN];
-
     memset(sendbuff, 0, MAXLEN);
-    memset(recvbuff, 0, MAXLEN);
 
     int check = 0;
 
@@ -107,6 +110,43 @@ void throughput(int clientdescriptor) {
             printf("Scegliere un protocollo tra quelli indicati nel messaggio precedente.\n");
         }
     }
+
+}
+
+
+//funzione per gestire il client nel calcolo dell’efficienza di utilizzo e della finestra ottimale in idleRQ
+void idleRQ(int clientdescriptor) {
+
+    float d = 0;
+    float U = 0; 
+    int frame = 0;  
+    float band = 0;
+    float window = 0;
+
+    printf("Inserire il valore della dimensione della PDU (in bit): ");
+    scanf("%d", &frame);
+    //invio al server del valore acquisito per la PDU
+    send(clientdescriptor, &frame, sizeof(int), 0);
+
+    printf("Inserire il valore della distanza (in metri): ");
+    scanf("%f", &d);
+    //invio al server del valore acquisito per distanza
+    send(clientdescriptor, &d, sizeof(float), 0);
+
+    printf("Inserire il valore della banda nominale (in bps): ");
+    scanf("%f", &band);
+    //invio al server del valore acquisito per la banda 
+    send(clientdescriptor, &band, sizeof(float), 0);
+
+    //recezione del valore dell'efficienza di utilizzo calcolata 
+    recv(clientdescriptor, &U, sizeof(float), 0);
+    printf("Valore dell'efficienza di utilizzo: ");
+    printf("%f\n", U);
+
+    //recezione del valore della finestra ottimale calcolata
+    recv(clientdescriptor, &window, sizeof(float), 0);
+    printf("Valore della finestra ottimale: ");
+    printf("%f\n", window);
 
 }
 
