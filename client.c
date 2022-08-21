@@ -4,163 +4,116 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define PORT 9090
+#define PORT 8080
+#define LISTEN 5
 #define MAXLEN 255
 
 void die(char *);
+void handleClient(int);
+void throughput(int);
 
 int main() {
 
-    char sendbuff[MAXLEN];
-    char recvbuff[MAXLEN];
-    memset(sendbuff, 0, MAXLEN);
-    memset(recvbuff, 0, MAXLEN);
+    struct sockaddr_in server_ip_port;
+    int server_ip_port_length = sizeof(server_ip_port);
 
-    struct sockaddr_in local;
-    int socketdescriptor = socket(AF_INET, SOCK_STREAM, 0);
-    if (socketdescriptor < 0) die("socket() error");
+    int clientdescriptor = socket(AF_INET, SOCK_STREAM, 0);
+    if (clientdescriptor < 0) die("socket() error.\n");
     printf("socket() ok.\n");
 
-    local.sin_family = AF_INET; 
-    local.sin_addr.s_addr = inet_addr("127.0.0.1");
-    local.sin_port = htons(PORT);
+    server_ip_port.sin_family = AF_INET; 
+    server_ip_port.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_ip_port.sin_port = htons(PORT);
 
-    if(connect(socketdescriptor, (struct sockaddr *) &local, sizeof(local)) < 0) die("connect() error");
+    if(connect(clientdescriptor, (struct sockaddr *) &server_ip_port, server_ip_port_length) < 0) die("connect() error.\n");
     printf("connect() ok.\n");
 
-    while(1) {
+    handleClient(clientdescriptor);
 
-        printf("Scegliere il metodo da eseguire: (throughput = T) (Efficenza del canale e tasso utilizzo = U) (Advertised Window = A) (Timeout = R)\n");
+    close(clientdescriptor);
+
+    return 0;
+}
+
+
+//funzione per definire la gestione delle azioni che può compiere il client
+void handleClient(int clientdescriptor) {
+
+    char sendbuff[MAXLEN];
+    memset(sendbuff, 0, MAXLEN);
+
+    int exit = 0;
+
+    while(1 && !exit) {
+
+        printf("Scegliere il metodo da eseguire: (throughput = T) (exit = E)\n");
         scanf("%s", sendbuff);
-        send(socketdescriptor, &sendbuff, MAXLEN, 0);
+
+        //invio della scelta del servizio da parte del client
+        send(clientdescriptor, &sendbuff, MAXLEN, 0);
 
         if (strcmp(sendbuff, "T") == 0) {
-            printf("Gestione del servizio: calcolo del throughput\n");
-            throughput(socketdescriptor); 
-        } else if(strcmp(sendbuff, "U") == 0){
-            printf("Gestione del servizio: calcolo dell'efficenza\n");
-            channelEfficency(socketdescriptor); 
-        } else if(strcmp(sendbuff, "A") == 0){
-            printf("Gestione del servizio: calcolo della finestra ottimale\n");
-            avertisedWindow(socketdescriptor); 
-        }else if(strcmp(sendbuff, "R") == 0){
-            printf("Gestione del servizio: calcolo del timeout\n");
-            RTT(socketdescriptor); 
-        }else {
-            printf("Questa funzione non è stata implementata\n");
+            printf("\nCalcolo del throughput -------------------------------------\n");
+            throughput(clientdescriptor); 
+            printf("------------------------------------------------------------\n\n");
+        } else if (strcmp(sendbuff, "E") == 0) {
+            exit = 1;
+        } else {
+            printf("Scegliere una lettere tra quelle indicate nel messaggio precedente.\n");
         }
 
     }
 
-    close(socketdescriptor);
-    return 0;
-
 }
 
 
-void throughput(int socketdescriptor) {
-    
+//funzione per gestire il client nel calcolo del throughput
+void throughput(int clientdescriptor) {
+
     char sendbuff[MAXLEN];
     char recvbuff[MAXLEN];
+
     memset(sendbuff, 0, MAXLEN);
     memset(recvbuff, 0, MAXLEN);
 
-    int bandaNominale = 0;
+    int check = 0;
+
+    float band = 0;
     float throughput = 0;
 
     printf("Inserire il valore della banda nominale (in Mbps): ");
-    scanf("%d", &bandaNominale);
-    send(socketdescriptor, &bandaNominale, sizeof(int), 0);
+    scanf("%f", &band);
+    //invio al server del valore acquisito per la banda nominale
+    send(clientdescriptor, &band, sizeof(float), 0);
 
-    printf("Protocollo utilizzato (TCP/UDP): ");
-    scanf("%s", &sendbuff);
-    send(socketdescriptor, &sendbuff, MAXLEN, 0);
+    while(!check) {
 
-    if (strcmp(sendbuff, "TCP") == 0 || strcmp(sendbuff, "UDP") == 0) {
-        printf("Valore del throughput (in Mbps): ");
-        recv(socketdescriptor, &throughput, sizeof(float), 0);
-        printf("%f\n\n", throughput);
-    } else {
-        printf("Scelta non possibile\n\n");
+        printf("Protocollo utilizzato (TCP/UDP): ");
+        scanf("%s", &sendbuff);
+        //invio al server del valore acquisito per indicare il protocollo usato
+        send(clientdescriptor, &sendbuff, MAXLEN, 0);
+
+        if (strcmp(sendbuff, "TCP") == 0 || strcmp(sendbuff, "UDP") == 0) {
+            check = 1;
+
+            //recezione del valore del throughput calcolato dal server
+            recv(clientdescriptor, &throughput, sizeof(float), 0);
+            
+            printf("Valore del throughput (in Mbps): ");
+            printf("%f\n", throughput);
+        } else {
+            check = 0;
+            printf("Scegliere un protocollo tra quelli indicati nel messaggio precedente.\n");
+        }
     }
 
 }
 
-void channelEfficency(int socketdescriptor){
 
-    int TIX = 0;
-    int Tt = 0;
-    int RTT = 0;
-    int U = 0;
-    float TassoU = 0;
-
-    printf("Inserire il tempo di invio del pacchetto: ");
-    scanf("%d", &TIX);
-    send(socketdescriptor, &TIX, sizeof(int), 0);
-
-    printf("Inserire il tempo che intercorre tra un invio di un frame e il successivo: ");
-    scanf("%d", &Tt);
-    send(socketdescriptor, &Tt, sizeof(int), 0);
-
-    printf("Inserire il tempo di propagazione del canale (RTT): ");
-    scanf("%d", &RTT);
-    send(socketdescriptor, &RTT, sizeof(int), 0);
-
-    printf("Valore dell'efficenza di utilizzo del canale: ");
-    recv(socketdescriptor, &U, sizeof(int), 0);
-    printf("%d\n", U);
-
-    printf("Valore del tasso di utilizzo del canale: ");
-    recv(socketdescriptor, &TassoU, sizeof(float), 0);
-    printf("%5.2f %\n\n", TassoU);
-}
-
-void avertisedWindow(int socketdescriptor){
-
-    int RTT = 0;
-    int width = 0;
-    int AW = 0;
-
-    printf("Inserire il tempo di propagazione del canale(RTT): ");
-    scanf("%d", &RTT);
-    send(socketdescriptor, &RTT, sizeof(int),0);
-    
-    printf("Inserire la larghezza di banda del canale: ");
-    scanf("%d", &width);
-    send(socketdescriptor, &width, sizeof(int), 0);
-
-    printf("Il valore della finestra ottimale è: ");
-    recv(socketdescriptor, &AW, sizeof(int), 0);
-    printf("%d\n\n", AW);
-}
-
-void RTT(int socketdescriptor){
-    
-    int currentTime = 0;
-    int sendTime = 0;
-
-    float EstimatedRTT = 1;
-    float Timeout = 0;
-    float Error = 0;
-
-    printf("Inserire il tempo corrente: ");
-    scanf("%d", &currentTime);
-    send(socketdescriptor, &currentTime, sizeof(int),0);
-
-    printf("Inserire il tempo di invio del pacchetto: ");
-    scanf("%d", &sendTime);
-    send(socketdescriptor, &sendTime, sizeof(int),0);
-
-    
-    recv(socketdescriptor, &EstimatedRTT, sizeof(float), 0);
-    recv(socketdescriptor, &Error, sizeof(float), 0);
-    recv(socketdescriptor, &Timeout, sizeof(float), 0);
-    printf("Estimated RTT: %5.2f,\t Errore: %5.2f,\t Timeout: %5.2f\n\n", EstimatedRTT, Error, Timeout);
-
-}
-
-
+//funzione usata in caso di erroe per terminare il programma e stampare un messaggio di errore
 void die(char *error) {
+    
     fprintf(stderr, "%s.\n", error);
     exit(1);
+
 }

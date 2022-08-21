@@ -4,202 +4,137 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define PORT 9090
+#define PORT 8080
 #define LISTEN 5
 #define MAXLEN 255
 
 void die(char *);
+void handleClient(int);
 void throughput(int);
 
 int main() {
 
-    char recvbuff[MAXLEN];
-    memset(recvbuff, 0, MAXLEN);
+    struct sockaddr_in bind_ip_port;
+    int bind_ip_port_length = sizeof(bind_ip_port);
 
-    struct sockaddr_in local;
     int serverdescriptor = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverdescriptor < 0) die("socket() error");
+    if (serverdescriptor < 0) die("socket() error.\n");
     printf("socket() ok.\n");
 
-    local.sin_family = AF_INET; 
-    local.sin_addr.s_addr = inet_addr("127.0.0.1");
-    local.sin_port = htons(PORT);
-    
-    if(bind(serverdescriptor, (struct sockaddr *) &local, sizeof(local)) < 0) die("bind() error");
+    bind_ip_port.sin_family = AF_INET; 
+    bind_ip_port.sin_addr.s_addr = inet_addr("127.0.0.1");
+    bind_ip_port.sin_port = htons(PORT);
+
+    if(bind(serverdescriptor, (struct sockaddr *) &bind_ip_port, bind_ip_port_length) < 0) die("bind() error.\n");
     printf("bind() ok.\n");
 
-    if(listen(serverdescriptor, LISTEN) < 0) die("listen() error");
+    if(listen(serverdescriptor, LISTEN) < 0) die("listen() error.\n");
     printf("listen ok.\n");
 
-    char choice[10];
-
     while(1) {
-
+        
         int clientdescriptor = accept(serverdescriptor, NULL, NULL);
-        if (clientdescriptor < 0) die("accept() error");
+        if (clientdescriptor < 0) die("accept() error.\n");
         printf("accept() ok.\n");
+        printf("------- new client connected. -------\n");
 
-        int pid = fork();
+        pid_t pid = fork();
 
         if (pid < 0) {
-            die("fork() error"); 
+            die("fork() error.\n"); 
         } else if (pid > 0) {
-            //Processo padre: chiudo il socket slave
             close(clientdescriptor); 
-        } else {
-            //Processo figlio: chiudo il socket master
+        } else if (pid == 0) {
             close(serverdescriptor);
-            memset(choice, 0, 10);
-
-            printf("Client %d connesso\n",clientdescriptor); //stampo id del socket
-
-            while(1){
-                if(clientdescriptor < 0) die("Client disconnected");
-                //Gestione del client acquisito
-                printf("In attesa della scelta del client\n\n");
-                recv(clientdescriptor, &recvbuff, MAXLEN, 0);
-
-                if (strcmp(recvbuff, "T") == 0) {
-                    //printf("Gestione del servizio: calcolo del throughput\n");
-                    throughput(clientdescriptor); 
-                }else if(strcmp(recvbuff, "U") == 0){
-                    //printf("Gestione del servizio: calcolo dell'efficenza\n");
-                    channelEfficency(clientdescriptor); 
-                }else if(strcmp(recvbuff, "A") == 0){
-                    //printf("Gestione del servizio: calcolo della finestra ottimale\n");
-                    avertisedWindow(clientdescriptor); 
-                }else if(strcmp(recvbuff, "R") == 0){
-                    //printf("Gestione del servizio: calcolo del timeout\n");
-                    RTT(clientdescriptor); 
-                }
-            }
-
-            printf("Servizio terminato\n");
+            handleClient(clientdescriptor);
+            printf("------- client disconnected. -------\n");
+            close(clientdescriptor);
             exit(0);
         }
-
+    
     }
 
     close(serverdescriptor);
     return 0;
+}
+
+
+//funzione per definire la gestione del client acquisito
+void handleClient(int clientdescriptor) {
+
+    char recvbuff[MAXLEN];
+    memset(recvbuff, 0, MAXLEN);
+
+    int check = 0;
+
+    while(!check) {
+
+        //acquisizione della scelta del servizio del client
+        recv(clientdescriptor, &recvbuff, MAXLEN, 0); 
+
+        if (strcmp(recvbuff, "T") == 0) {
+            check = 1;
+            throughput(clientdescriptor); 
+        } else if (strcmp(recvbuff, "E") == 0) {
+            check = 1;
+        } else {
+            check = 0;
+        }
+
+    }
 
 }
 
 
+//funzione per implementare il servizio di calcolo del throughput
 void throughput(int clientdescriptor) {
     
     char recvbuff[MAXLEN];
     memset(recvbuff, 0, MAXLEN);
 
-    int bandaNominale = 0;
+    int check = 0;
+
+    float band = 0;
     float throughput = 0;
-    int overheadEthernet = 18;
-    int overheadIp = 20;
-    int frameEthernet = 1500;
-    int overheadTCP = 20;
-    int overheadUDP = 8;
-    
+    float overheadEthernet = 18;
+    float overheadIp = 20;
+    float frameEthernet = 1500;
+    float overheadTCP = 20;
+    float overheadUDP = 8;
 
-    recv(clientdescriptor, &bandaNominale, sizeof(int), 0);
-    //printf("Banda nominale: %d\n", bandaNominale); //pv
-    recv(clientdescriptor, &recvbuff, MAXLEN, 0);
-    //printf("Protocollo: %s\n", recvbuff);   //pv
+    //acquisizione del valore della banda nominale
+    recv(clientdescriptor, &band, sizeof(float), 0);
 
-    if (strcmp(recvbuff, "TCP") == 0) {
-        throughput = (float)(frameEthernet - (overheadTCP + overheadIp)) / (float)(frameEthernet + overheadEthernet);
-        throughput = throughput * (float)bandaNominale;
-    } else if (strcmp(recvbuff, "UDP") == 0) {
-        throughput = (float)(frameEthernet - (overheadUDP + overheadIp)) / (float)(frameEthernet + overheadEthernet);
-        throughput = throughput * (float)bandaNominale;
+    while(!check) {
+
+        //acquisizione del tipo di protocollo usato (TCP oppure UDP)
+        recv(clientdescriptor, &recvbuff, MAXLEN, 0);
+
+        if (strcmp(recvbuff, "TCP") == 0) {
+            check = 1;
+            //(1500 - 40)/(1500 + 18)
+            throughput = (frameEthernet - (overheadTCP + overheadIp)) / (frameEthernet + overheadEthernet);
+            throughput = throughput * band;
+        } else if (strcmp(recvbuff, "UDP") == 0) {
+            check = 1;
+            //(1500 - 28)/(1500 + 18)
+            throughput = (frameEthernet - (overheadUDP + overheadIp)) / (frameEthernet + overheadEthernet);
+            throughput = throughput * band;
+        } else {
+            check = 0;
+        }
     }
 
-    //printf("%f\n", throughput); //provvisorio
+    //invio del valore del throughput calcolato in base ai parametri ricevuti
     send(clientdescriptor, &throughput, sizeof(float), 0);
 
 }
 
-void channelEfficency (int clientdescriptor){
 
-    int TIX = 0;
-    int Tt = 0;
-    int RTT = 0;
-    int U = 0;
-    float TassoU = 0;
-
-    recv(clientdescriptor, &TIX, sizeof(int), 0);
-    //printf("Tempo di invio del pacchetto: %d\n", TIX); //pv
-    recv(clientdescriptor, &Tt, sizeof(int), 0);
-    //printf("Tempo tra invio di un frame e il successivo: %d\n", Tt);   //pv
-    recv(clientdescriptor, &RTT, sizeof(int), 0);
-    //printf("Tempo di propagazione: %d\n", RTT);   //pv
-
-
-    U = TIX/Tt;
-    TassoU = ((float)TIX/(float)(TIX+2*RTT))*100;
-
-    //printf("%d\n%f\n", U, TassoU); //provvisorio
-    send(clientdescriptor, &U, sizeof(int), 0);
-    send(clientdescriptor, &TassoU, sizeof(float), 0);
-}
-
-void avertisedWindow(int clientdescriptor){
-
-    int RTT = 0;
-    int width = 0;
-    int AW = 0;
-
-    recv(clientdescriptor, &RTT, sizeof(int),0);
-    //printf("Tempo di propagazione (RTT): %d\n", RTT);
-    
-    recv(clientdescriptor, &width, sizeof(int), 0);
-    //printf("Larghezza banda del canale: %d\n", width);
-
-    AW = RTT * width;
-
-    //printf("Il valore della finestra ottimale è: %d\n",AW);
-    send(clientdescriptor, &AW, sizeof(int), 0);
-}
-
-void RTT(int clientdescriptor){
-    
-    int currentTime = 0;
-    int sendTime = 0;
-    int SampleRTT = 0;
-    float EstimatedRTT = 1;
-    float x = 0.1;
-    float Deviation = 0;
-    float Timeout = 0;
-    float Error = 0;
-    float h = 0.25;
-    
-    recv(clientdescriptor, &currentTime, sizeof(int),0);
-    //printf("Tempo corrente: %d\n", currentTime);
-
-    recv(clientdescriptor, &sendTime, sizeof(int),0);
-    //printf("Tempo invio: %d\n", sendTime);
-
-    SampleRTT = currentTime - sendTime;
-
-    EstimatedRTT = ((1-x)*EstimatedRTT)+(x*(float)SampleRTT);
-
-    Error = SampleRTT - EstimatedRTT;
-    if(Error<0){
-        Error = -Error;
-    }
-
-    Deviation = Deviation + h*(Error-Deviation);
-
-    Timeout = EstimatedRTT + 4*Deviation;
-
-    //printf("Estimated RTT: %f,\t Errore: %f,\t Timeout: %f\n", EstimatedRTT, Error, Timeout);
-    send(clientdescriptor, &EstimatedRTT, sizeof(float), 0);
-    send(clientdescriptor, &Error, sizeof(float), 0);
-    send(clientdescriptor, &Timeout, sizeof(float), 0);
-
-}
-
-
+//funzione usata in caso di erroe per terminare il programma e stampare un messaggio di errore
 void die(char *error) {
+    
     fprintf(stderr, "%s.\n", error);
     exit(1);
+
 }
