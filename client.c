@@ -12,6 +12,7 @@ void die(char *);
 void handleClient(int);
 void throughput(int);
 void idleRQ(int);
+void window(int);
 
 int main() {
 
@@ -47,7 +48,7 @@ void handleClient(int clientdescriptor) {
 
     while(!exit) {
 
-        printf("Scegliere il metodo da eseguire: (throughput = T) (idleRQ = I) (exit = E)\n");
+        printf("Scegliere il metodo da eseguire: (throughput = T) (idleRQ = I) (avertised window = W) (exit = E)\n");
         scanf("%s", sendbuff);
 
         //invio della scelta del servizio da parte del client
@@ -62,6 +63,11 @@ void handleClient(int clientdescriptor) {
             printf("\n########################################################################\n");
             printf("Calcolo del idleRQ\n");
             idleRQ(clientdescriptor); 
+            printf("########################################################################\n\n");
+        } else if (strcmp(sendbuff, "W") == 0) {
+            printf("\n########################################################################\n");
+            printf("Calcolo della finestra ottimale\n");
+            window(clientdescriptor); 
             printf("########################################################################\n\n");
         } else if (strcmp(sendbuff, "E") == 0) {
             exit = 1;
@@ -144,6 +150,31 @@ void idleRQ(int clientdescriptor) {
     printf("%f\n", U);
 
     //recezione del valore della finestra ottimale calcolata
+    recv(clientdescriptor, &window, sizeof(float), 0);
+    printf("Valore della finestra ottimale: ");
+    printf("%f\n", window);
+
+}
+
+
+//funzione usata per gestire il client nel calcola la finestra ottimale
+void window(int clientdescriptor) {
+
+    float Tt = 0;
+    float band = 0;
+    float window = 0;
+
+    printf("Inserire il valore del round trip time (RTT) (in secondi): ");
+    scanf("%f", &Tt);
+    //invio del valore tempo totale che intercorre tra l’invio di un frame e il successivo (o RTT)
+    send(clientdescriptor, &Tt, sizeof(float), 0);
+
+    printf("Inserire il valore della banda nominale (in bps): ");
+    scanf("%f", &band);
+    //invio del valore della banda
+    send(clientdescriptor, &band, sizeof(float), 0);
+
+    //acquisizione del valore della finestra ottimale calcolato in base ai parametri ricevuti
     recv(clientdescriptor, &window, sizeof(float), 0);
     printf("Valore della finestra ottimale: ");
     printf("%f\n", window);

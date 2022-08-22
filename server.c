@@ -11,6 +11,7 @@
 void die(char *);
 void handleClient(int);
 void throughput(int);
+void window(int);
 
 int main() {
 
@@ -78,6 +79,9 @@ void handleClient(int clientdescriptor) {
         } else if (strcmp(recvbuff, "I") == 0) {
             exit = 0;
             idleRQ(clientdescriptor);
+        } else if (strcmp(recvbuff, "W") == 0) {
+            exit = 0;
+            window(clientdescriptor);
         } else if (strcmp(recvbuff, "E") == 0) {
             exit = 1;
         } else {
@@ -167,6 +171,27 @@ void idleRQ(int clientdescriptor) {
 
     //invio del valore dell'efficienza calcolato in base ai parametri ricevuti
     send(clientdescriptor, &U, sizeof(float), 0);
+
+    //invio del valore della finestra ottimale calcolato in base ai parametri ricevuti
+    send(clientdescriptor, &window, sizeof(float), 0);
+
+}
+
+
+//funzione usata per calcola la finestra ottimale
+void window(int clientdescriptor){
+
+    float Tt = 0;
+    float band = 0;
+    float window = 0;
+
+    //acquisizione del valore tempo totale che intercorre tra l’invio di un frame e il successivo (o RTT)
+    recv(clientdescriptor, &Tt, sizeof(float), 0);
+
+    //acquisizione del valore della banda
+    recv(clientdescriptor, &band, sizeof(float), 0);
+
+    window = Tt * band;
 
     //invio del valore della finestra ottimale calcolato in base ai parametri ricevuti
     send(clientdescriptor, &window, sizeof(float), 0);
