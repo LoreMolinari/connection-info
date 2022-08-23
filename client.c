@@ -13,6 +13,7 @@ void handleClient(int);
 void throughput(int);
 void idleRQ(int);
 void window(int);
+void timeout(int);
 
 int main() {
 
@@ -48,27 +49,32 @@ void handleClient(int clientdescriptor) {
 
     while(!exit) {
 
-        printf("Scegliere il metodo da eseguire: (throughput = T) (idleRQ = I) (avertised window = W) (exit = E)\n");
+        printf("Scegliere il metodo da eseguire: (throughput = T) (idleRQ = I) (avertised window = W) (timeout = TT) (exit = E)\n");
         scanf("%s", sendbuff);
 
         //invio della scelta del servizio da parte del client
         send(clientdescriptor, &sendbuff, MAXLEN, 0);
 
         if (strcmp(sendbuff, "T") == 0) {
-            printf("\n########################################################################\n");
+            printf("\n#-----------------------#\n");
             printf("Calcolo del throughput\n");
             throughput(clientdescriptor); 
-            printf("########################################################################\n\n");
+            printf("#-------------------------#\n\n");
         } else if (strcmp(sendbuff, "I") == 0) {
-            printf("\n########################################################################\n");
+            printf("\n#-----------------------#\n");
             printf("Calcolo del idleRQ\n");
             idleRQ(clientdescriptor); 
-            printf("########################################################################\n\n");
+            printf("#-------------------------#\n\n");
         } else if (strcmp(sendbuff, "W") == 0) {
-            printf("\n########################################################################\n");
+            printf("\n#-----------------------#\n");
             printf("Calcolo della finestra ottimale\n");
             window(clientdescriptor); 
-            printf("########################################################################\n\n");
+            printf("#-------------------------#\n\n");
+        } else if (strcmp(sendbuff, "TT") == 0) {
+            printf("\n#-----------------------#\n");
+            printf("Calcolo del timeout\n");
+            timeout(clientdescriptor); 
+            printf("#-------------------------#\n\n");
         } else if (strcmp(sendbuff, "E") == 0) {
             exit = 1;
         } else {
@@ -157,7 +163,7 @@ void idleRQ(int clientdescriptor) {
 }
 
 
-//funzione usata per gestire il client nel calcola la finestra ottimale
+//funzione usata per gestire il client nel calcolo la finestra ottimale
 void window(int clientdescriptor) {
 
     float Tt = 0;
@@ -178,6 +184,36 @@ void window(int clientdescriptor) {
     recv(clientdescriptor, &window, sizeof(float), 0);
     printf("Valore della finestra ottimale: ");
     printf("%f\n", window);
+
+}
+
+
+//funzione usata per gestire il client nel calcolo del timeout
+void timeout(int clientdescriptor) {
+
+    float sampleRTT = 0;
+    float estimatedRTT = 0;
+    float timeout = 0;
+
+    printf("Inserire il valore del sample RTT (in secondi): ");
+    scanf("%f", &sampleRTT);
+    //invio del valore del sample RTT
+    send(clientdescriptor, &sampleRTT, sizeof(float), 0);
+
+    printf("Inserire il valore dell'estimated RTT precedente (in secondi): ");
+    scanf("%f", &estimatedRTT);
+    //invio del valore dell'estimated RTT precedente
+    send(clientdescriptor, &estimatedRTT, sizeof(float), 0);
+
+    //acquisizione del valore dell'estimated RTT
+    recv(clientdescriptor, &estimatedRTT, sizeof(float), 0);
+    printf("Valore dell'estimated RTT: ");
+    printf("%f\n", estimatedRTT);
+
+    //acquisizione del valore del timeout calcolato 
+    recv(clientdescriptor, &timeout, sizeof(float), 0);
+    printf("Valore del timeout: ");
+    printf("%f\n", timeout);
 
 }
 

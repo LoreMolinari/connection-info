@@ -12,6 +12,7 @@ void die(char *);
 void handleClient(int);
 void throughput(int);
 void window(int);
+void timeout(int);
 
 int main() {
 
@@ -37,7 +38,7 @@ int main() {
         int clientdescriptor = accept(serverdescriptor, NULL, NULL);
         if (clientdescriptor < 0) die("accept() error.\n");
         printf("accept() ok.\n");
-        printf("####### new client connected. #######\n");
+        printf("---------- new client connected ----------\n");
 
         pid_t pid = fork();
 
@@ -48,7 +49,7 @@ int main() {
         } else if (pid == 0) {
             close(serverdescriptor);
             handleClient(clientdescriptor);
-            printf("####### client disconnected. #######\n");
+            printf("---------- client disconnected ----------\n");
             close(clientdescriptor);
             exit(0);
         }
@@ -82,6 +83,9 @@ void handleClient(int clientdescriptor) {
         } else if (strcmp(recvbuff, "W") == 0) {
             exit = 0;
             window(clientdescriptor);
+        } else if (strcmp(recvbuff, "TT") == 0) {
+            exit = 0;
+            timeout(clientdescriptor);
         } else if (strcmp(recvbuff, "E") == 0) {
             exit = 1;
         } else {
@@ -195,6 +199,33 @@ void window(int clientdescriptor){
 
     //invio del valore della finestra ottimale calcolato in base ai parametri ricevuti
     send(clientdescriptor, &window, sizeof(float), 0);
+
+}
+
+
+//funzione usata per il calcolo del timeout
+void timeout(int clientdescriptor) {
+
+    float sampleRTT = 0;
+    float estimatedRTT = 0;
+    float timeout = 0;
+
+    float x = 0.1;
+
+    //acquisizione del valore del sample RTT
+    recv(clientdescriptor, &sampleRTT, sizeof(float),0);
+
+    //acquisizione del valore del'estimated RTT precedente
+    recv(clientdescriptor, &estimatedRTT, sizeof(float),0);
+
+    estimatedRTT = ((1-x) * estimatedRTT) + (x * sampleRTT);
+    timeout = estimatedRTT * 2;
+
+    //invio del valore dell'estimated RTT
+    send(clientdescriptor, &estimatedRTT, sizeof(float), 0);
+
+    //invio del valore del timeout calcolato con i parametri dati
+    send(clientdescriptor, &timeout, sizeof(float), 0);
 
 }
 
