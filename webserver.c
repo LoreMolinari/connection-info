@@ -7,11 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
-#include "ipaddress.h"
+#include "getRequest.h"
 
 #define PORT 9090
 #define LISTEN 5
 #define MAXLEN 255
+#define MAX_LINE_LENGTH (1024)
 
 int main(int argc, char **argv)
 {
@@ -72,7 +73,7 @@ void handleClient(int clientdescriptor) {
     if (f == NULL) die("fdopen() error.\n");
     printf("fdopen() ok.\n");
 
-    sendFirstResponse(f, get_ip_address(f), "test");
+    sendFirstResponse(f, getRequest(f), "test");
 
     fclose(f);
     // stdout needs to be flushed in order for heroku to read the logs
@@ -81,9 +82,8 @@ void handleClient(int clientdescriptor) {
 
 }
 
-void sendFirstResponse(FILE *f, char *key, char *value)
-{
-
+void sendFirstResponse(FILE *f, char* key, char *value)
+{ 
   const char htmlResponse[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations</title>\r\n </head>\r\n <body>\r\n"
   "<h1>Scegliere il metodo da eseguire: </h1>\r\n <form action='' method='get'> <input type='submit' id='t' name='choice' value='Throughput'>\r\n"
   "<input type='submit' id='i' name='choice' value='IdleRQ'>\r\n <input type='submit' id='w' name='choice' value='AdvertisedWindow'>\r\n"
@@ -93,6 +93,26 @@ void sendFirstResponse(FILE *f, char *key, char *value)
   fprintf(f, "HTTP/1.1 200 OK\r\n");
   fprintf(f, "Content-Type: text/html\r\n");
   fprintf(f, htmlResponse);
+
+  printf("%s\n", key);
+  parseString(key);
+
+
+}
+
+void parseString(char* s){
+  int i=0;
+  char* choice = malloc (sizeof (char) * MAX_LINE_LENGTH);
+
+  for(i=0; i<MAX_LINE_LENGTH; i++){
+    
+    if(s[i] == '='){
+      printf("Found");
+      /*concatenare choiche con s[i] fino a "\0"*/
+      i=MAX_LINE_LENGTH;
+    }
+  }
+  printf("\n%s\n",choice);
 }
 
 /*void methodSelection(clientdescriptor){
