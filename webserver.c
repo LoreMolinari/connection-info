@@ -9,10 +9,12 @@
 #include <signal.h>
 #include "getRequest.h"
 
-#define PORT 9090
+#define PORT 9091
 #define LISTEN 5
 #define MAXLEN 255
 #define MAX_LINE_LENGTH (1024)
+
+char* scanString(char* s);
 
 int main(int argc, char **argv)
 {
@@ -94,45 +96,176 @@ void sendFirstResponse(FILE *f, char* key, char *value)
   fprintf(f, "Content-Type: text/html\r\n");
   fprintf(f, htmlResponse);
 
-  printf("%s\n", key);
-  parseString(key);
-
+  methodSelection(f, scanString(key));
 
 }
 
-void parseString(char* s){
+char* scanString(char* s){
   int i=0;
   char* choice = malloc (sizeof (char) * MAX_LINE_LENGTH);
 
   for(i=0; i<MAX_LINE_LENGTH; i++){
     
     if(s[i] == '='){
-      printf("Found");
+      i++;
       /*concatenare choiche con s[i] fino a "\0"*/
+      while(i<MAX_LINE_LENGTH){
+        strncat(choice, &s[i], 1);
+        i++;
+      }
       i=MAX_LINE_LENGTH;
     }
   }
-  printf("\n%s\n",choice);
+
+  return choice;
 }
 
-/*void methodSelection(clientdescriptor){
-
-  char* selection;
-  selection = get_selection();
+void methodSelection(FILE *f, char* selection){
   
-  if (strcmp(selection, "T") == 0) {
-    throughput(clientdescriptor);
-  } else if (strcmp(selection, "I") == 0) {
-    idleRQ(clientdescriptor);
-  } else if (strcmp(selection, "W") == 0) {
-    window(clientdescriptor);
-  } else if (strcmp(selection, "TT") == 0) {
-    timeout(clientdescriptor);
-  } else {
-    invalidmethod();
+  if (strcmp(selection, "Throughput") == 0) {
+    sendResponseMethod(f, 't');
+  } else if (strcmp(selection, "IdleRQ") == 0) {
+    sendResponseMethod(f, 'i');
+  } else if (strcmp(selection, "AdvertisedWindow") == 0) {
+    sendResponseMethod(f, 'a');
+  } else if (strcmp(selection, "Timeout") == 0) {
+    sendResponseMethod(f, 'e');
+  } else if(strcmp(selection, "")){
+    printf("Homepage\n");
+  }else{
+    scanData(selection, f);
   }
 
-}*/
+}
+
+void scanData(char* s, FILE*  f){
+  int i=0;
+  char* choice = malloc (sizeof (char) * MAX_LINE_LENGTH);
+  int counter=0;
+
+  int banda;
+  int distanza;
+  int dimensione;
+  int RTT;
+  int EstimatedRTT;
+  char* protocollo;
+
+  char* primo = malloc (sizeof (char) * MAX_LINE_LENGTH);
+  char* secondo = malloc (sizeof (char) * MAX_LINE_LENGTH);
+  char* terzo= malloc (sizeof (char) * MAX_LINE_LENGTH);
+  char* quarto= malloc (sizeof (char) * MAX_LINE_LENGTH);
+
+  printf("\n\n%s\n\n",s);
+
+  /*for(i=0; i<MAX_LINE_LENGTH; i++){
+    if(i=0){
+      while(s[i]!='&'){
+        strncat(choice, &s[i], 1);
+        i++;
+      }
+      strncpy(primo, choice, sizeof(choice));
+      printf("%s\n", choice);
+    }
+    
+    if(s[i] == '='){
+      i++;
+      while((s[i]!='&') || (i < MAX_LINE_LENGTH)){
+        strncat(choice, &s[i], 1);
+        i++;
+      }
+
+      printf("%s\n", choice);
+      if(counter == 0){
+        strncpy(secondo, choice, sizeof(choice));
+      }else if(counter == 1){
+        strncpy(terzo, choice, sizeof(choice));
+      }else if(counter == 2){
+        strncpy(quarto, choice, sizeof(choice));
+      }
+      counter++;
+    }
+  }*/
+
+  if(strcmp(terzo, "Invia+AdvertisedWindow")){
+    banda = (int)primo;
+    RTT = (int)secondo;
+
+    printf("A: %d\n%d\n", banda, RTT);
+
+    //advertisedWindow(f, banda, RTT);
+  }else if(strcmp(terzo, "Invia+Timeout")){
+    RTT = (int)primo;
+    EstimatedRTT = (int)secondo;
+
+    printf("TT: %d\n%d\n", RTT, EstimatedRTT);
+
+    //timeout(f, RTT, EstimatedRTT);
+  }else if(strcmp(terzo, "Invia+Throughput")){
+    banda = (int)primo;
+    strncpy(protocollo, secondo, sizeof(secondo));
+
+    printf("T: %d\n%s\n", banda, protocollo);
+
+    //throughput(f, banda, protocollo);
+  }else if(strcmp(quarto, "Invia+IdleRQ")){
+    banda = (int)primo;
+    distanza = (int)secondo;
+    dimensione = (int)terzo;
+
+    printf("I: %d\n%d\n%d\n", banda, distanza, dimensione);
+
+    //idleRQ(f, banda, distanza, dimensione);
+  }
+}
+
+void sendResponseMethod(FILE* f, char c){
+
+  const char htmlResponseThroughput[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations Throughput</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Inserire i dati per calcolare il throughput: </h1>\r\n <form action='' method='get'> Banda: <input type='number' id='band' name='band' value='100'></br>\r\n"
+  "<input type='radio' id='TCP' name='Protocol' value='TCP'> TCP</br>\r\n <input type='radio' id='UDP' name='Protocol' value='UDP'> UDP</br>\r\n"
+  "<input type='submit' id='T' name='T' value='Invia Throughput'></form>\r\n"
+  "</body>\r\n </html>\r\n\r\n";
+
+  const char htmlResponseIdleRQ[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations IdleRQ</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Inserire i dati per calcolare efficenza di utilizzo (U) e Finestra ottimale (window): </h1>\r\n <form action='' method='get'> Banda: <input type='number' id='band' name='band' value='100'></br>\r\n"
+  "Distanza: <input type='number' id='d' name='distanza' value='100'></br>\r\n Dimensione del Frame: <input type='number' id='df' name='DimensioneFrame' value='100'></br>\r\n"
+  "<input type='submit' id='I' name='I' value='Invia IdleRQ'></form>\r\n"
+  "</body>\r\n </html>\r\n\r\n";
+
+  const char htmlResponseAdvertisedWindow[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations AdvertisedWindow</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Inserire i dati per calcolare il valore della finestra ottimale: </h1>\r\n <form action='' method='get'> Banda: <input type='number' id='band' name='band' value='100'></br>\r\n"
+  "RTT: <input type='number' id='RTT' name='RTT' value='10'></br>\r\n"
+  "<input type='submit' id='A' name='A' value='Invia AdvertisedWindow'></form>\r\n"
+  "</body>\r\n </html>\r\n\r\n";
+
+  const char htmlResponseTimeout[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations Timeout</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Inserire i dati per calcolare il valore del RTT stimato e il Timeout: </h1>\r\n <form action='' method='get'> RTT: <input type='number' id='RTT' name='RTT' value='10'></br>\r\n"
+  "Estimated RTT (precedente): <input type='number' id='ERTT' name='ERTT' value='10'></br>\r\n"
+  "<input type='submit' id='TT' name='TT' value='Invia Timeout'></form>\r\n"
+  "</body>\r\n </html>\r\n\r\n";
+
+  if(c=='t'){
+    fprintf(f, htmlResponseThroughput);
+
+    methodSelection(f, scanString(getRequest(f)));
+
+  }else if(c=='i'){
+    fprintf(f, htmlResponseIdleRQ);
+
+    methodSelection(f, scanString(getRequest(f)));
+  }else if(c=='a'){
+    fprintf(f, htmlResponseAdvertisedWindow);
+
+    methodSelection(f, scanString(getRequest(f)));
+  }else if(c=='e'){
+    fprintf(f, htmlResponseTimeout);
+
+    methodSelection(f, scanString(getRequest(f)));
+  }else{
+    die("Invalid Method Selected");
+  }
+
+}
 
 //funzione usata in caso di erroe per terminare il programma e stampare un messaggio di errore
 void die(char *error) {
