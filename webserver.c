@@ -9,7 +9,7 @@
 #include <signal.h>
 #include "getRequest.h"
 
-#define PORT 9091
+#define PORT 9090
 #define LISTEN 5
 #define MAXLEN 255
 #define MAX_LINE_LENGTH (1024)
@@ -101,6 +101,8 @@ void sendFirstResponse(FILE *f, char* key, char *value)
 }
 
 char* scanString(char* s){
+
+  fflush(stdout);
   int i=0;
   char* choice = malloc (sizeof (char) * MAX_LINE_LENGTH);
 
@@ -122,6 +124,7 @@ char* scanString(char* s){
 
 void methodSelection(FILE *f, char* selection){
   
+  printf("%s\n",selection);
   if (strcmp(selection, "Throughput") == 0) {
     sendResponseMethod(f, 't');
   } else if (strcmp(selection, "IdleRQ") == 0) {
@@ -130,15 +133,14 @@ void methodSelection(FILE *f, char* selection){
     sendResponseMethod(f, 'a');
   } else if (strcmp(selection, "Timeout") == 0) {
     sendResponseMethod(f, 'e');
-  } else if(strcmp(selection, "")){
-    printf("Homepage\n");
-  }else{
+  } else{
     scanData(selection, f);
   }
 
 }
 
 void scanData(char* s, FILE*  f){
+
   int i=0;
   char* choice = malloc (sizeof (char) * MAX_LINE_LENGTH);
   int counter=0;
@@ -150,6 +152,7 @@ void scanData(char* s, FILE*  f){
   int EstimatedRTT;
   char* protocollo;
 
+
   char* primo = malloc (sizeof (char) * MAX_LINE_LENGTH);
   char* secondo = malloc (sizeof (char) * MAX_LINE_LENGTH);
   char* terzo= malloc (sizeof (char) * MAX_LINE_LENGTH);
@@ -157,65 +160,112 @@ void scanData(char* s, FILE*  f){
 
   printf("\n\n%s\n\n",s);
 
-  /*for(i=0; i<MAX_LINE_LENGTH; i++){
-    if(i=0){
-      while(s[i]!='&'){
-        strncat(choice, &s[i], 1);
-        i++;
+  if(strcmp(s,"")!=0){
+    for(i=0; i<MAX_LINE_LENGTH; i++){
+      if(i==0){
+        while(s[i]!='&'){
+          strncat(choice, &s[i], 1);
+          i++;
+        }
+        strncpy(primo, choice, sizeof(choice));
+        printf("%s\n", choice);
+
+        free(choice);
+        choice =  malloc (sizeof (char) * MAX_LINE_LENGTH);
       }
-      strncpy(primo, choice, sizeof(choice));
-      printf("%s\n", choice);
+      
+      if(s[i] == '='){
+        i++;
+        while(isalnum(s[i])){
+          strncat(choice, &s[i], 1);
+          i++;
+        }
+
+        if(counter == 0){
+
+          strncpy(secondo, choice, sizeof(choice));
+          free(choice);
+          choice =  malloc (sizeof (char) * MAX_LINE_LENGTH);
+
+          printf("%s\n", secondo);
+
+        }else if(counter == 1){
+
+          strncpy(terzo, choice, 1024);
+          free(choice);
+          choice =  malloc (sizeof (char) * MAX_LINE_LENGTH);
+
+          printf("%s\n", terzo);
+
+        }else if(counter == 2){
+
+          strncpy(quarto, choice, 1024);
+
+          printf("%s\n", quarto);
+
+        }
+        counter++;
+      }
     }
+
+    free(choice);
     
-    if(s[i] == '='){
-      i++;
-      while((s[i]!='&') || (i < MAX_LINE_LENGTH)){
-        strncat(choice, &s[i], 1);
-        i++;
-      }
 
-      printf("%s\n", choice);
-      if(counter == 0){
-        strncpy(secondo, choice, sizeof(choice));
-      }else if(counter == 1){
-        strncpy(terzo, choice, sizeof(choice));
-      }else if(counter == 2){
-        strncpy(quarto, choice, sizeof(choice));
-      }
-      counter++;
+    if(strcmp(terzo, "AdvertisedWindow")==0){
+      sscanf(primo, "%d", &banda);
+      sscanf(secondo, "%d", &RTT);
+
+      printf("A: %d\n%d\n", banda, RTT);
+
+      free(primo);
+      free(secondo);
+      free(terzo);
+      free(quarto);
+
+      advertisedWindow(f, banda, RTT);
+    }else if(strcmp(terzo, "Timeout")==0){
+      sscanf(primo, "%d", &RTT);
+      sscanf(secondo, "%d", &EstimatedRTT);
+
+      printf("TT: %d\n%d\n", RTT, EstimatedRTT);
+
+      free(primo);
+      free(secondo);
+      free(terzo);
+      free(quarto);
+
+      //timeout(f, RTT, EstimatedRTT);
+    }else if(strcmp(terzo, "Throughput")==0){
+      sscanf(primo, "%d", &banda);
+      strncpy(protocollo, secondo, sizeof(secondo));
+
+      printf("T: %d\n%s\n", banda, protocollo);
+
+      free(primo);
+      free(secondo);
+      free(terzo);
+      free(quarto);
+
+      //throughput(f, banda, protocollo);
+    }else if(strcmp(quarto, "IdleRQ")==0){
+      sscanf(primo, "%d", &banda);
+      sscanf(secondo, "%d", &distanza);
+      sscanf(terzo, "%d", &dimensione);
+
+      printf("I: %d\n%d\n%d\n", banda, distanza, dimensione);
+
+      free(primo);
+      free(secondo);
+      free(terzo);
+      free(quarto);
+
+      //idleRQ(f, banda, distanza, dimensione);
+    }else{
+      printf("Errore\n");
     }
-  }*/
-
-  if(strcmp(terzo, "Invia+AdvertisedWindow")){
-    banda = (int)primo;
-    RTT = (int)secondo;
-
-    printf("A: %d\n%d\n", banda, RTT);
-
-    //advertisedWindow(f, banda, RTT);
-  }else if(strcmp(terzo, "Invia+Timeout")){
-    RTT = (int)primo;
-    EstimatedRTT = (int)secondo;
-
-    printf("TT: %d\n%d\n", RTT, EstimatedRTT);
-
-    //timeout(f, RTT, EstimatedRTT);
-  }else if(strcmp(terzo, "Invia+Throughput")){
-    banda = (int)primo;
-    strncpy(protocollo, secondo, sizeof(secondo));
-
-    printf("T: %d\n%s\n", banda, protocollo);
-
-    //throughput(f, banda, protocollo);
-  }else if(strcmp(quarto, "Invia+IdleRQ")){
-    banda = (int)primo;
-    distanza = (int)secondo;
-    dimensione = (int)terzo;
-
-    printf("I: %d\n%d\n%d\n", banda, distanza, dimensione);
-
-    //idleRQ(f, banda, distanza, dimensione);
   }
+
+  
 }
 
 void sendResponseMethod(FILE* f, char c){
@@ -223,25 +273,25 @@ void sendResponseMethod(FILE* f, char c){
   const char htmlResponseThroughput[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations Throughput</title>\r\n </head>\r\n <body>\r\n"
   "<h1>Inserire i dati per calcolare il throughput: </h1>\r\n <form action='' method='get'> Banda: <input type='number' id='band' name='band' value='100'></br>\r\n"
   "<input type='radio' id='TCP' name='Protocol' value='TCP'> TCP</br>\r\n <input type='radio' id='UDP' name='Protocol' value='UDP'> UDP</br>\r\n"
-  "<input type='submit' id='T' name='T' value='Invia Throughput'></form>\r\n"
+  "<input type='submit' id='T' name='T' value='Throughput'></form>\r\n"
   "</body>\r\n </html>\r\n\r\n";
 
   const char htmlResponseIdleRQ[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations IdleRQ</title>\r\n </head>\r\n <body>\r\n"
   "<h1>Inserire i dati per calcolare efficenza di utilizzo (U) e Finestra ottimale (window): </h1>\r\n <form action='' method='get'> Banda: <input type='number' id='band' name='band' value='100'></br>\r\n"
   "Distanza: <input type='number' id='d' name='distanza' value='100'></br>\r\n Dimensione del Frame: <input type='number' id='df' name='DimensioneFrame' value='100'></br>\r\n"
-  "<input type='submit' id='I' name='I' value='Invia IdleRQ'></form>\r\n"
+  "<input type='submit' id='I' name='I' value='IdleRQ'></form>\r\n"
   "</body>\r\n </html>\r\n\r\n";
 
   const char htmlResponseAdvertisedWindow[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations AdvertisedWindow</title>\r\n </head>\r\n <body>\r\n"
   "<h1>Inserire i dati per calcolare il valore della finestra ottimale: </h1>\r\n <form action='' method='get'> Banda: <input type='number' id='band' name='band' value='100'></br>\r\n"
   "RTT: <input type='number' id='RTT' name='RTT' value='10'></br>\r\n"
-  "<input type='submit' id='A' name='A' value='Invia AdvertisedWindow'></form>\r\n"
+  "<input type='submit' id='A' name='A' value='AdvertisedWindow'></form>\r\n"
   "</body>\r\n </html>\r\n\r\n";
 
   const char htmlResponseTimeout[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations Timeout</title>\r\n </head>\r\n <body>\r\n"
   "<h1>Inserire i dati per calcolare il valore del RTT stimato e il Timeout: </h1>\r\n <form action='' method='get'> RTT: <input type='number' id='RTT' name='RTT' value='10'></br>\r\n"
   "Estimated RTT (precedente): <input type='number' id='ERTT' name='ERTT' value='10'></br>\r\n"
-  "<input type='submit' id='TT' name='TT' value='Invia Timeout'></form>\r\n"
+  "<input type='submit' id='TT' name='TT' value='Timeout'></form>\r\n"
   "</body>\r\n </html>\r\n\r\n";
 
   if(c=='t'){
@@ -265,6 +315,23 @@ void sendResponseMethod(FILE* f, char c){
     die("Invalid Method Selected");
   }
 
+}
+
+void advertisedWindow(FILE* f, int banda, int RTT){
+  char* window = "100";
+
+  sendCalculations(f, window, "", "", "AW");
+}
+
+void sendCalculations(FILE* f, char* data1, char* data2, char* data3, char* method){
+  const char htmlResponseAW[] = "\r\n <html>\r\n <head>\r\n <title>Result</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Risultato Advertesied Window: </h1>\r\n Dimensione ottimale finestra = \r\n";
+  strcat(htmlResponseAW, data1);
+  strcat(htmlResponseAW, "</body>\r\n </html>\r\n\r\n");
+
+  if(strcmp(method, "AW")){
+    fprintf(f, htmlResponseAW);
+  }
 }
 
 //funzione usata in caso di erroe per terminare il programma e stampare un messaggio di errore
