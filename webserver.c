@@ -318,20 +318,13 @@ void sendResponseMethod(FILE* f, char c){
 }
 
 void advertisedWindow(FILE* f, int banda, int RTT){
-  char* window = "100";
-
-  sendCalculations(f, window, "", "", "AW");
 }
 
-void sendCalculations(FILE* f, char* data1, char* data2, char* data3, char* method){
-  const char htmlResponseAW[] = "\r\n <html>\r\n <head>\r\n <title>Result</title>\r\n </head>\r\n <body>\r\n"
-  "<h1>Risultato Advertesied Window: </h1>\r\n Dimensione ottimale finestra = \r\n";
-  strcat(htmlResponseAW, data1);
-  strcat(htmlResponseAW, "</body>\r\n </html>\r\n\r\n");
+void sendCalculations(FILE* f, char* data1, char* data2, char* data3, char method){
 
-  if(strcmp(method, "AW")){
-    fprintf(f, htmlResponseAW);
-  }
+  char* htmlResponseAW = "\r\n <html>\r\n <head>\r\n <title>Result</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Risultato Advertesied Window: </h1>\r\n Dimensione ottimale finestra = test \r\n"
+  "</body>\r\n </html>\r\n\r\n";
 }
 
 //funzione usata in caso di erroe per terminare il programma e stampare un messaggio di errore
