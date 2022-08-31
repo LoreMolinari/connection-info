@@ -86,7 +86,9 @@ void handleClient(int clientdescriptor) {
 
 void sendFirstResponse(FILE *f, char* key, char *value)
 { 
-  const char htmlResponse[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations</title>\r\n </head>\r\n <body>\r\n"
+  fflush(stdout);
+
+  const char htmlResponse[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations</title>\r\n <link rel='icon' href='data:,'> \r\n</head>\r\n <body>\r\n"
   "<h1>Scegliere il metodo da eseguire: </h1>\r\n <form action='' method='get'> <input type='submit' id='t' name='choice' value='Throughput'>\r\n"
   "<input type='submit' id='i' name='choice' value='IdleRQ'>\r\n <input type='submit' id='w' name='choice' value='AdvertisedWindow'>\r\n"
   "<input type='submit' id='TT' name='choice' value='Timeout'></form>\r\n"
@@ -118,7 +120,6 @@ char* scanString(char* s){
       i=MAX_LINE_LENGTH;
     }
   }
-
   return choice;
 }
 
@@ -158,7 +159,7 @@ void scanData(char* s, FILE*  f){
   char* terzo= malloc (sizeof (char) * MAX_LINE_LENGTH);
   char* quarto= malloc (sizeof (char) * MAX_LINE_LENGTH);
 
-  printf("\n\n%s\n\n",s);
+  //printf("\n\n%s\n\n",s);
 
   if(strcmp(s,"")!=0){
     for(i=0; i<MAX_LINE_LENGTH; i++){
@@ -168,7 +169,7 @@ void scanData(char* s, FILE*  f){
           i++;
         }
         strncpy(primo, choice, sizeof(choice));
-        printf("%s\n", choice);
+        //printf("%s\n", choice);
 
         free(choice);
         choice =  malloc (sizeof (char) * MAX_LINE_LENGTH);
@@ -187,7 +188,7 @@ void scanData(char* s, FILE*  f){
           free(choice);
           choice =  malloc (sizeof (char) * MAX_LINE_LENGTH);
 
-          printf("%s\n", secondo);
+          //printf("%s\n", secondo);
 
         }else if(counter == 1){
 
@@ -195,13 +196,13 @@ void scanData(char* s, FILE*  f){
           free(choice);
           choice =  malloc (sizeof (char) * MAX_LINE_LENGTH);
 
-          printf("%s\n", terzo);
+          //printf("%s\n", terzo);
 
         }else if(counter == 2){
 
           strncpy(quarto, choice, 1024);
 
-          printf("%s\n", quarto);
+          //printf("%s\n", quarto);
 
         }
         counter++;
@@ -215,7 +216,7 @@ void scanData(char* s, FILE*  f){
       sscanf(primo, "%d", &banda);
       sscanf(secondo, "%d", &RTT);
 
-      printf("A: %d\n%d\n", banda, RTT);
+      //printf("A: %d\n%d\n", banda, RTT);
 
       free(primo);
       free(secondo);
@@ -227,15 +228,15 @@ void scanData(char* s, FILE*  f){
       sscanf(primo, "%d", &RTT);
       sscanf(secondo, "%d", &EstimatedRTT);
 
-      printf("TT: %d\n%d\n", RTT, EstimatedRTT);
+      //printf("TT: %d\n%d\n", RTT, EstimatedRTT);
 
       free(primo);
       free(secondo);
       free(terzo);
       free(quarto);
 
-      //timeout(f, RTT, EstimatedRTT);
-    }else if(strcmp(terzo, "Throughput")==0){
+      timeout(f, RTT, (float)EstimatedRTT);
+    }/*else if(strcmp(terzo, "Throughput")==0){
       sscanf(primo, "%d", &banda);
       strncpy(protocollo, secondo, sizeof(secondo));
 
@@ -246,20 +247,22 @@ void scanData(char* s, FILE*  f){
       free(terzo);
       free(quarto);
 
+      printf("Banda: %d\n Protocollo: %s\n, Secondo: %s\n", banda, protocollo, secondo);
+
       //throughput(f, banda, protocollo);
-    }else if(strcmp(quarto, "IdleRQ")==0){
+    }*/else if(strcmp(quarto, "IdleRQ")==0){
       sscanf(primo, "%d", &banda);
       sscanf(secondo, "%d", &distanza);
       sscanf(terzo, "%d", &dimensione);
 
-      printf("I: %d\n%d\n%d\n", banda, distanza, dimensione);
+      //printf("I: %d\n%d\n%d\n", banda, distanza, dimensione);
 
       free(primo);
       free(secondo);
       free(terzo);
       free(quarto);
 
-      //idleRQ(f, banda, distanza, dimensione);
+      idleRQ(f, banda, distanza, dimensione);
     }else{
       printf("Errore\n");
     }
@@ -269,6 +272,7 @@ void scanData(char* s, FILE*  f){
 }
 
 void sendResponseMethod(FILE* f, char c){
+  fflush(stdout);
 
   const char htmlResponseThroughput[] = "\r\n <html>\r\n <head>\r\n <title>Protocols calculations Throughput</title>\r\n </head>\r\n <body>\r\n"
   "<h1>Inserire i dati per calcolare il throughput: </h1>\r\n <form action='' method='get'> Banda: <input type='number' id='band' name='band' value='100'></br>\r\n"
@@ -318,13 +322,127 @@ void sendResponseMethod(FILE* f, char c){
 }
 
 void advertisedWindow(FILE* f, int banda, int RTT){
+  
+  int result = banda * RTT;
+  char data[20];
+  printf("Risultato: %d\n", result);
+
+  sprintf(data, "%d", result);
+  printf("Data: %s\n", data);
+  
+  sendCalculations(f, data, "", 'A');
 }
 
-void sendCalculations(FILE* f, char* data1, char* data2, char* data3, char method){
+void timeout(FILE* f, int RTT, float EstimatedRTT){
+
+  float timeout = 0;
+  float x = 0.1;
+
+  EstimatedRTT = ((1-x) * EstimatedRTT) + (x * RTT);
+  timeout = EstimatedRTT * 2;
+  
+  char data1[20];
+  char data2[20];
+  printf("Risultato: %f\n%f\n", EstimatedRTT, timeout);
+
+  sprintf(data1, "%f", EstimatedRTT);
+  sprintf(data2, "%f", timeout);
+  printf("Data: %s\n %s\n", data1, data2);
+  
+  sendCalculations(f, data1, data2, 'E');
+}
+
+void idleRQ(FILE* f, int banda, int distanza, int dimensione){
+
+  float Tix = 0; //tempo di trasmissione del frame
+  float Tp = 0; //ritardo di propagazione
+  float Tt = 0; //tempo totale che intercorre tra l’invio di un frame e il successivo
+  float U = 0; //efficienza di utilizzo
+  float window =  0;
+  
+  Tix = (float)dimensione/(float)banda;
+  Tp = (float)distanza/(float)banda;
+
+  Tt = Tix + 2*Tp;
+  U = Tix/(Tix + 2*Tp);
+
+  window = Tt * (float)banda;
+
+  char data1[20];
+  char data2[20];
+  printf("Risultato: %f\n%f\n", window, U);
+
+  sprintf(data1, "%f", window);
+  sprintf(data2, "%f", U);
+  printf("Data: %s\n%s\n", data1,data2);
+  
+  sendCalculations(f, data1, data2, 'I');
+}
+
+void throughput(FILE* f, int banda, char* protocollo){
+
+  char* data;
+
+  float throughput = 0;
+  float overheadEthernet = 18;
+  float overheadIp = 20;
+  float frameEthernet = 1500;
+  float overheadTCP = 20;
+  float overheadUDP = 8;
+
+  printf("banda: %d\n Protocollo: %s\n", banda, protocollo);
+
+  if (strcmp(protocollo, "TCP") == 0) {
+    //(1500 - 40)/(1500 + 18)
+    throughput = (frameEthernet - (overheadTCP + overheadIp)) / (frameEthernet + overheadEthernet);
+    throughput = throughput * (float)banda;
+  } else if (strcmp(protocollo, "UDP") == 0) {
+    //(1500 - 28)/(1500 + 18)
+    throughput = (frameEthernet - (overheadUDP + overheadIp)) / (frameEthernet + overheadEthernet);
+    throughput = throughput * (float)banda;
+  }
+  
+  printf("Risultato: %d\n", throughput);
+
+  sprintf(data, "%d", throughput);
+  printf("Data: %s\n", data);
+  
+  sendCalculations(f, data, "", 'T');
+}
+
+void sendCalculations(FILE* f, char* data1, char* data2, char method){
+  fflush(stdout);
+
+  printf("DATA1: %s\n DATA2: %s\n Metodo: %c\n", data1, data2, method);
 
   char* htmlResponseAW = "\r\n <html>\r\n <head>\r\n <title>Result</title>\r\n </head>\r\n <body>\r\n"
-  "<h1>Risultato Advertesied Window: </h1>\r\n Dimensione ottimale finestra = test \r\n"
-  "</body>\r\n </html>\r\n\r\n";
+  "<h1>Risultato Advertesied Window: </h1>\r\n Dimensione ottimale finestra = ";
+
+  char* htmlResponseT = "\r\n <html>\r\n <head>\r\n <title>Result</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Risultato Throughput: </h1>\r\n Throughput =  \r\n";
+
+  char* htmlResponseI = "\r\n <html>\r\n <head>\r\n <title>Result</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Risultato IdleRQ: </h1>\r\n Dimensione ottimale finestra =  , Efficenza di utilizzo del canale = \r\n";
+
+  char* htmlResponseTT = "\r\n <html>\r\n <head>\r\n <title>Result</title>\r\n </head>\r\n <body>\r\n"
+  "<h1>Risultato Timeout: </h1>\r\n EstimatedRTT = , Timeout = \r\n";
+
+  char* htmlClosing = "\r\n</body>\r\n </html>\r\n\r\n";
+  
+  if(method == 'A'){
+    fprintf(f, htmlResponseAW);
+    fprintf(f, htmlClosing);
+  }else if(method == 'T'){
+    fprintf(f, htmlResponseT);
+    fprintf(f, htmlClosing);
+  }else if(method == 'I'){
+    fprintf(f, htmlResponseI);
+    fprintf(f, htmlClosing);
+  }else if(method == 'E'){
+    fprintf(f, htmlResponseTT);
+    fprintf(f, htmlClosing);
+  }
+
 }
 
 //funzione usata in caso di erroe per terminare il programma e stampare un messaggio di errore
