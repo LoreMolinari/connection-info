@@ -1,61 +1,55 @@
-#define MAX_LINE_LENGTH (1024)
+#define MAXLINE 1024
 
 char* getRequest(FILE *f) {
+
     int choicheFound = 0;
-    char* response = malloc (sizeof (char) * MAX_LINE_LENGTH);
-    char header_line[MAX_LINE_LENGTH];
+    char* response = malloc (sizeof (char) * MAXLINE);
+    char header_line[MAXLINE];
     char* res;
     char* scan;
     int exit = 0;
 
-    if (f == NULL) die("getReqeuest() error.");
+    if (f == NULL) die("getReqeuest() error.\n");
 
     do {
-        res = fgets(header_line, MAX_LINE_LENGTH, f);
-
+        res = fgets(header_line, MAXLINE, f);
         if (res != NULL) {
-            printf("%s", res);
-
+            printf("%s\n", res);
             if (!choicheFound) {
                 choicheFound = searchReferer(res, response);
             }
         }
     } while (res != NULL && strcmp(header_line, "\r\n") != 0);
     
-    printf("\n%s\n", response);
+    printf("%s\n", response);
     return response;
 }
 
 
 int searchReferer(char *line, char *address) {
 
-  int found = 0;
-  char *ptr;
-  char *name;
-  char *value;
+    int found = 0;
+    char *ptr;
+    char *name;
+    char *value;
 
-  name = strndup(line, MAX_LINE_LENGTH);
-  ptr = index(name, (int)':');
-  if (ptr == NULL) {
-    return 0;
-  }
-  // end the string at the colon
-  *ptr = '\0';
+    name = strndup(line, MAXLINE);
+    ptr = index(name, (int)':');
+    if (ptr == NULL) return 0;
+    
+    *ptr = '\0';
+    ptr = index(line, (int) ':');
+    value = strndup(ptr + 2, MAXLINE);
 
-  // get the value part of the header field
-  ptr = index(line, (int) ':');
-  value = strndup(ptr + 2, MAX_LINE_LENGTH);
+    value[strlen(value)-2] = '\0';
 
-  // most ugly way to remove \r\n from the end of the string
-  value[strlen(value)-2] = '\0';
+    if (strncmp(name, "Referer", MAXLINE) == 0) {
+        found = 1;
+        strncpy(address, value, MAXLINE);
+    }
 
-  if (strncmp(name, "Referer", MAX_LINE_LENGTH) == 0) {
-    found = 1;
-    strncpy(address, value, MAX_LINE_LENGTH);
-  }
+    free(name);
+    free(value);
 
-  free(name);
-  free(value);
-
-  return found;
+    return found;
 }

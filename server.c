@@ -4,7 +4,14 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include <sys/types.h>
+#include <errno.h>
+#include <unistd.h>
+#include <signal.h>
+#include "getRequest.h"
+
 #define PORT 8080
+#define WEBPORT 9090
 #define LISTEN 5
 #define MAXLEN 255
 
@@ -97,6 +104,81 @@ void handleClient(int clientdescriptor) {
 }
 
 
+void printResult(char *data) {
+
+    struct sockaddr_in bind_ip_port;
+    int bind_ip_port_length = sizeof(bind_ip_port);
+
+    int serverdescriptor = socket(AF_INET, SOCK_STREAM, 0);
+    if (serverdescriptor < 0) die("socket() error.\n");
+    printf("socket() ok.\n");
+
+    bind_ip_port.sin_family = AF_INET; 
+    bind_ip_port.sin_addr.s_addr = inet_addr("127.0.0.1");
+    bind_ip_port.sin_port = htons(WEBPORT);
+
+    if(bind(serverdescriptor, (struct sockaddr *) &bind_ip_port, bind_ip_port_length) < 0) die("bind() error.\n");
+    printf("bind() ok.\n");
+
+    if(listen(serverdescriptor, LISTEN) < 0) die("listen() error.\n");
+    printf("listen ok.\n");
+
+    while (1){
+
+        struct sockaddr_in client_addr;
+        socklen_t clientaddr_len;
+
+        int clientdescriptor = accept(serverdescriptor, (struct sockaddr *)&client_addr, &clientaddr_len);
+        if (clientdescriptor < 0) die("accept() error.\n");
+        printf("accept() ok.\n");
+        
+        printf("---------- new client connected ----------\n");
+
+        pid_t pid = fork();
+
+        if (pid < 0) {
+            die("fork() error.\n"); 
+        } else if (pid > 0) {
+            close(clientdescriptor); 
+        } else if (pid == 0) {
+            close(serverdescriptor);
+            
+            
+            FILE* f = fdopen(clientdescriptor, "w+");
+            if (f == NULL) die("fdopen() error.\n");
+            printf("fdopen() ok.\n");
+
+            getRequest(f);
+            fflush(stdout);
+
+            char html[24] = "\r\n <html>\r\n <body>\r\n<p>";
+            char htmlBottom[26] = "</p>\r\n</body>\r\n </html>\r\n";
+
+            strncat(html, data, MAXLEN);
+            strncat(html, &htmlBottom, sizeof(htmlBottom));
+
+            printf("\n%s\n", html);
+
+            fprintf(f, "HTTP/1.1 200 OK\r\n");
+            fprintf(f, "Content-Type: text/html\r\n");
+            fprintf(f, html);
+
+            fclose(f);
+            fflush(stdout);
+
+
+            printf("---------- client disconnected ----------\n");
+            close(clientdescriptor);
+            exit(0);
+        }
+
+    }
+
+    close(serverdescriptor);
+
+}
+
+
 //funzione per implementare il servizio di calcolo del throughput
 void throughput(int clientdescriptor) {
     
@@ -140,6 +222,13 @@ void throughput(int clientdescriptor) {
     //invio del valore del throughput calcolato in base ai parametri ricevuti
     send(clientdescriptor, &throughput, sizeof(float), 0);
 
+    //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
+    char data[23] = "Valore del throughput: ";
+    char toString[MAXLEN];
+    sprintf(toString, "%d", throughput);
+    strncat(data, &toString, MAXLEN);
+    printResult(&data);
+
 }
 
 
@@ -178,7 +267,6 @@ void idleRQ(int clientdescriptor) {
 
     //invio del valore della finestra ottimale calcolato in base ai parametri ricevuti
     send(clientdescriptor, &window, sizeof(float), 0);
-
 }
 
 
