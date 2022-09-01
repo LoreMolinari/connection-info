@@ -151,8 +151,8 @@ void printResult(char *data) {
             getRequest(f);
             fflush(stdout);
 
-            char html[24] = "\r\n <html>\r\n <body>\r\n<p>";
-            char htmlBottom[26] = "</p>\r\n</body>\r\n </html>\r\n";
+            char html[MAXLEN] = "\r\n <html>\r\n <body>\r\n<p>";
+            char htmlBottom[MAXLEN] = "</p>\r\n</body>\r\n </html>\r\n";
 
             strncat(html, data, MAXLEN);
             strncat(html, &htmlBottom, sizeof(htmlBottom));
