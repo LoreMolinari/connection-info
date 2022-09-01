@@ -223,7 +223,7 @@ void throughput(int clientdescriptor) {
     send(clientdescriptor, &throughput, sizeof(float), 0);
 
     //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
-    char data[23] = "Valore del throughput: ";
+    char data[MAXLEN] = "Valore del throughput: ";
     char toString[MAXLEN];
     sprintf(toString, "%d", throughput);
     strncat(data, &toString, MAXLEN);
