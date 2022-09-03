@@ -20,6 +20,7 @@ void handleClient(int);
 void throughput(int);
 void window(int);
 void timeout(int);
+void printResult(char *);
 
 int main() {
 
@@ -110,69 +111,53 @@ void printResult(char *data) {
     int bind_ip_port_length = sizeof(bind_ip_port);
 
     int serverdescriptor = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverdescriptor < 0) die("socket() error.\n");
-    printf("socket() ok.\n");
+    if (serverdescriptor < 0) die("web socket() error.\n");
+    printf("web socket() ok.\n");
 
     bind_ip_port.sin_family = AF_INET; 
     bind_ip_port.sin_addr.s_addr = inet_addr("127.0.0.1");
     bind_ip_port.sin_port = htons(WEBPORT);
 
-    if(bind(serverdescriptor, (struct sockaddr *) &bind_ip_port, bind_ip_port_length) < 0) die("bind() error.\n");
-    printf("bind() ok.\n");
+    if(bind(serverdescriptor, (struct sockaddr *) &bind_ip_port, bind_ip_port_length) < 0) die("web bind() error.\n");
+    printf("web bind() ok.\n");
 
-    if(listen(serverdescriptor, LISTEN) < 0) die("listen() error.\n");
-    printf("listen ok.\n");
+    if(listen(serverdescriptor, LISTEN) < 0) die("web listen() error.\n");
+    printf("web listen ok.\n");
 
-    while (1){
+    //struct sockaddr_in client_addr;
+    //socklen_t clientaddr_len;
 
-        struct sockaddr_in client_addr;
-        socklen_t clientaddr_len;
+    int clientdescriptor = accept(serverdescriptor, NULL, NULL);
+    if (clientdescriptor < 0) die("web accept() error.\n");
+    printf("web accept() ok.\n");
+    
+    printf("---------- new client connected ----------\n");
+    
+    FILE* f = fdopen(clientdescriptor, "w+");
+    if (f == NULL) die("fdopen() error.\n");
+    printf("fdopen() ok.\n");
 
-        int clientdescriptor = accept(serverdescriptor, (struct sockaddr *)&client_addr, &clientaddr_len);
-        if (clientdescriptor < 0) die("accept() error.\n");
-        printf("accept() ok.\n");
-        
-        printf("---------- new client connected ----------\n");
+    getRequest(f);
+    fflush(stdout);
 
-        pid_t pid = fork();
+    char html[MAXLEN] = "\r\n <html>\r\n <body>\r\n<p>";
+    char htmlBottom[MAXLEN] = "</p>\r\n</body>\r\n </html>\r\n";
 
-        if (pid < 0) {
-            die("fork() error.\n"); 
-        } else if (pid > 0) {
-            close(clientdescriptor); 
-        } else if (pid == 0) {
-            close(serverdescriptor);
-            
-            
-            FILE* f = fdopen(clientdescriptor, "w+");
-            if (f == NULL) die("fdopen() error.\n");
-            printf("fdopen() ok.\n");
+    strncat(html, data, MAXLEN);
+    strncat(html, &htmlBottom, sizeof(htmlBottom));
 
-            getRequest(f);
-            fflush(stdout);
+    printf("\n%s\n", html);
 
-            char html[MAXLEN] = "\r\n <html>\r\n <body>\r\n<p>";
-            char htmlBottom[MAXLEN] = "</p>\r\n</body>\r\n </html>\r\n";
+    fprintf(f, "HTTP/1.1 200 OK\r\n");
+    fprintf(f, "Content-Type: text/html\r\n");
+    fprintf(f, html);
 
-            strncat(html, data, MAXLEN);
-            strncat(html, &htmlBottom, sizeof(htmlBottom));
+    fclose(f);
+    fflush(stdout);
 
-            printf("\n%s\n", html);
+    close(clientdescriptor);
 
-            fprintf(f, "HTTP/1.1 200 OK\r\n");
-            fprintf(f, "Content-Type: text/html\r\n");
-            fprintf(f, html);
-
-            fclose(f);
-            fflush(stdout);
-
-
-            printf("---------- client disconnected ----------\n");
-            close(clientdescriptor);
-            exit(0);
-        }
-
-    }
+    printf("---------- client disconnected ----------\n");
 
     close(serverdescriptor);
 
@@ -225,7 +210,7 @@ void throughput(int clientdescriptor) {
     //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
     char data[MAXLEN] = "Valore del throughput: ";
     char toString[MAXLEN];
-    sprintf(toString, "%d", throughput);
+    gcvt(throughput, 10, toString);
     strncat(data, &toString, MAXLEN);
     printResult(&data);
 
@@ -267,6 +252,17 @@ void idleRQ(int clientdescriptor) {
 
     //invio del valore della finestra ottimale calcolato in base ai parametri ricevuti
     send(clientdescriptor, &window, sizeof(float), 0);
+
+    //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
+    char data[MAXLEN] = "Valore dell'efficienza: ";
+    char toString[MAXLEN];
+    gcvt(U, 10, toString);
+    strncat(data, &toString, MAXLEN);
+    strncat(data, " - Valore della finestra ottimale: ", MAXLEN);
+    gcvt(window, 10, toString);
+    strncat(data, &toString, MAXLEN);
+    printResult(&data);
+
 }
 
 
@@ -287,6 +283,13 @@ void window(int clientdescriptor){
 
     //invio del valore della finestra ottimale calcolato in base ai parametri ricevuti
     send(clientdescriptor, &window, sizeof(float), 0);
+
+    //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
+    char data[MAXLEN] = "Valore della finestra ottimale: ";
+    char toString[MAXLEN];
+    gcvt(window, 10, toString);
+    strncat(data, &toString, MAXLEN);
+    printResult(&data);
 
 }
 
@@ -314,6 +317,16 @@ void timeout(int clientdescriptor) {
 
     //invio del valore del timeout calcolato con i parametri dati
     send(clientdescriptor, &timeout, sizeof(float), 0);
+
+    //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
+    char data[MAXLEN] = "Valore dell'estimated RTT: ";
+    char toString[MAXLEN];
+    gcvt(estimatedRTT, 10, toString);
+    strncat(data, &toString, MAXLEN);
+    strncat(data, " - Valore del timeout: ", MAXLEN);
+    gcvt(timeout, 10, toString);
+    strncat(data, &toString, MAXLEN);
+    printResult(&data);
 
 }
 
