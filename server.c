@@ -118,14 +118,17 @@ void printResult(char *data) {
     bind_ip_port.sin_addr.s_addr = inet_addr("127.0.0.1");
     bind_ip_port.sin_port = htons(WEBPORT);
 
-    if(bind(serverdescriptor, (struct sockaddr *) &bind_ip_port, bind_ip_port_length) < 0) die("web bind() error.\n");
+    int enable = 1;
+    setsockopt(serverdescriptor, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+
+    if(bind(serverdescriptor, (struct sockaddr *) &bind_ip_port, bind_ip_port_length) < 0) {
+        printf("Oh dear, something went wrong with bind()! %s\n", strerror(errno));
+        die("web bind() error.\n");
+    }
     printf("web bind() ok.\n");
 
     if(listen(serverdescriptor, LISTEN) < 0) die("web listen() error.\n");
     printf("web listen ok.\n");
-
-    //struct sockaddr_in client_addr;
-    //socklen_t clientaddr_len;
 
     int clientdescriptor = accept(serverdescriptor, NULL, NULL);
     if (clientdescriptor < 0) die("web accept() error.\n");
@@ -156,10 +159,9 @@ void printResult(char *data) {
     fflush(stdout);
 
     close(clientdescriptor);
+    close(serverdescriptor);
 
     printf("---------- client disconnected ----------\n");
-
-    close(serverdescriptor);
 
 }
 
