@@ -9,14 +9,17 @@
 #include <signal.h>
 #include "getRequest.h"
 
-#define PORT 9092
+#define PORT 9090
 #define LISTEN 5
-#define MAXLEN 100000
+#define MAXLEN 2048
 #define MAX_LINE_LENGTH (1024)
 
 char* scanString(char* s);
 void die(char *error);
-float throughput(FILE* f, int banda, char* protocollo);
+float throughput(int banda, char* protocollo);
+int advertisedWindow(int banda, int RTT);
+const char* timeout(int RTT, float EstimatedRTT);
+const char* idleRQ(int banda, int distanza, int dimensione);
 
 int main(int argc, char **argv)
 {
@@ -88,9 +91,6 @@ void handleClient(int clientdescriptor) {
 }
 
 void sendResponse(FILE *f, char* key, char *data){ 
-  fflush(stdout);
-
-  printf("Data: %s\n",data);
 
   char html[MAXLEN] = "\r\n <html>\r\n<head>\r\n <title>Protocols calculations</title>\r\n <link rel='icon' href='data:,'> \r\n <head>\r\n <body>\r\n<p>";
   char htmlBottom[MAXLEN] = "</p>\r\n</body>\r\n </html>\r\n";
@@ -106,17 +106,19 @@ void sendResponse(FILE *f, char* key, char *data){
 
   strncat(html, data, MAXLEN);
   strncat(html, &htmlBottom, sizeof(htmlBottom));
-  
   fprintf(f, html);
+  
+  scanString(key);
 
-  printf("Key: %s\n", key);
-  methodSelection(f, scanString(key));
+  if(strcmp(key, "") == 0){
+    methodSelection(f, "");
+  }else{
+    methodSelection(f, scanString(key));
+  }
 
 }
 
 char* scanString(char* s){
-
-  fflush(stdout);
   int i=0;
   char* choice = malloc (sizeof (char) * MAX_LINE_LENGTH);
 
@@ -145,9 +147,7 @@ void methodSelection(FILE *f, char* selection){
     "<input type='radio' id='TCP' name='Protocol' value='TCP'> TCP</br>\r\n <input type='radio' id='UDP' name='Protocol' value='UDP'> UDP</br>\r\n"
     "<input type='submit' id='T' name='T' value='Throughput'></form>\r\n";
 
-    printf("\n\n%s\n\n", data);
-
-    sendResponse(f, getRequest(f), data);
+    sendResponse(f, "", data);
 
   } else if (strcmp(selection, "IdleRQ") == 0) {
 
@@ -155,7 +155,7 @@ void methodSelection(FILE *f, char* selection){
     "Distanza: <input type='number' id='d' name='distanza' value='100'></br>\r\n Dimensione del Frame: <input type='number' id='df' name='DimensioneFrame' value='100'></br>\r\n"
     "<input type='submit' id='I' name='I' value='IdleRQ'></form>\r\n";
 
-    sendResponse(f, getRequest(f), data);
+    sendResponse(f, "", data);
 
   } else if (strcmp(selection, "AdvertisedWindow") == 0) {
 
@@ -163,7 +163,7 @@ void methodSelection(FILE *f, char* selection){
     "RTT: <input type='number' id='RTT' name='RTT' value='10'></br>\r\n"
     "<input type='submit' id='A' name='A' value='AdvertisedWindow'></form>\r\n";
 
-    sendResponse(f, getRequest(f), data);
+    sendResponse(f, "", data);
 
   } else if (strcmp(selection, "Timeout") == 0) {
 
@@ -171,10 +171,10 @@ void methodSelection(FILE *f, char* selection){
     "Estimated RTT (precedente): <input type='number' id='ERTT' name='ERTT' value='10'></br>\r\n"
     "<input type='submit' id='TT' name='TT' value='Timeout'></form>\r\n";
 
-    sendResponse(f, getRequest(f), data);
+    sendResponse(f, "", data);
 
   } else{
-    //scanData(selection, f);
+    scanData(selection, f);
   }
 
   
@@ -200,8 +200,6 @@ void scanData(char* s, FILE*  f){
   char* terzo= malloc (sizeof (char) * MAX_LINE_LENGTH);
   char* quarto= malloc (sizeof (char) * MAX_LINE_LENGTH);
 
-  printf("Sono qui: %s\n",s);
-
   if(strcmp(s,"")!=0){
     for(i=0; i<MAX_LINE_LENGTH; i++){
       if(i==0){
@@ -221,7 +219,6 @@ void scanData(char* s, FILE*  f){
           strncat(choice, &s[i], 1);
           i++;
         }
-        printf("test: %s\n", choice);
 
         if(counter == 0){
 
@@ -246,115 +243,100 @@ void scanData(char* s, FILE*  f){
 
 
     free(choice);
-    /*
 
     if(strcmp(terzo, "AdvertisedWindow")==0){
       sscanf(primo, "%d", &banda);
       sscanf(secondo, "%d", &RTT);
 
-      printf("A: %d\n%d\n", banda, RTT);
-      char data[MAXLEN] = "<h1>Risultato Advertesied Window: </h1>\r\n Dimensione ottimale finestra = ";
-      sendResponse(f, "", data);
-
       free(primo);
       free(secondo);
       free(terzo);
       free(quarto);
 
-      //advertisedWindow(f, banda, RTT);
+      //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
+      char data[MAXLEN] = "Valore del Advertised Window: ";
+      char toString[MAXLEN];
+      sprintf(toString, "%d", advertisedWindow(banda, RTT));
+      strncat(data, &toString, MAXLEN);
+
+      sendResponse(f, "", data);
+
     }else if(strcmp(terzo, "Timeout")==0){
       sscanf(primo, "%d", &RTT);
       sscanf(secondo, "%d", &EstimatedRTT);
 
-      printf("TT: %d\n%d\n", RTT, EstimatedRTT);
-
-      char data[MAXLEN] = "<h1>Risultato Timeout: </h1>\r\n EstimatedRTT = , Timeout = \r\n";
-
       free(primo);
       free(secondo);
       free(terzo);
       free(quarto);
 
-      sendResponse(f, "", data);
+      //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
+      sendResponse(f, "", timeout(RTT, (float)EstimatedRTT));
 
       //timeout(f, RTT, (float)EstimatedRTT);
     }else if(strcmp(terzo, "Throughput")==0){
       sscanf(primo, "%d", &banda);
-      strncpy(protocollo, secondo, sizeof(secondo));
-
-      printf("T: %d\n%s\n", banda, protocollo);
 
       free(primo);
-      free(secondo);
       free(terzo);
       free(quarto);
-
-      printf("Banda: %d\n Protocollo: %s\n, Secondo: %s\n", banda, protocollo, secondo);
 
       //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
       char data[MAXLEN] = "Valore del throughput: ";
       char toString[MAXLEN];
-      sprintf(toString, "%f", throughput(f, banda, protocollo));
+      sprintf(toString, "%f", throughput(banda, secondo));
       strncat(data, &toString, MAXLEN);
+      free(secondo);
       sendResponse(f, "", data);
 
     }else if(strcmp(quarto, "IdleRQ")==0){
       sscanf(primo, "%d", &banda);
       sscanf(secondo, "%d", &distanza);
       sscanf(terzo, "%d", &dimensione);
-
-      printf("I: %d\n%d\n%d\n", banda, distanza, dimensione);
-
-      char data[MAXLEN] = "<h1>Risultato IdleRQ: </h1>\r\n Dimensione ottimale finestra =  , Efficenza di utilizzo del canale = \r\n";
-      sendResponse(f, "", data);
       
       free(primo);
       free(secondo);
       free(terzo);
       free(quarto);
 
-      //idleRQ(f, banda, distanza, dimensione);
+      //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
+      sendResponse(f, "", idleRQ(banda, distanza, dimensione));
     }else{
-      printf("ERRORE ERRORE\n\n\n\n ERRORE ERRORE\n");
+      die("Protcol Error");
     }
-   */ 
   }
   
 }
 
-/*
-void advertisedWindow(FILE* f, int banda, int RTT){
-  
-  int result = banda * RTT;
-  char data[20];
-  printf("Risultato: %d\n", result);
 
-  sprintf(data, "%d", result);
-  printf("Data: %s\n", data);
-  
-  sendCalculations(f, data, "", 'A');
+int advertisedWindow(int banda, int RTT){
+
+  return banda * RTT;
+
 }
 
-void timeout(FILE* f, int RTT, float EstimatedRTT){
+const char* timeout(int RTT, float EstimatedRTT){
 
   float timeout = 0;
   float x = 0.1;
 
   EstimatedRTT = ((1-x) * EstimatedRTT) + (x * RTT);
   timeout = EstimatedRTT * 2;
-  
-  char data1[20];
-  char data2[20];
-  printf("Risultato: %f\n%f\n", EstimatedRTT, timeout);
 
-  sprintf(data1, "%f", EstimatedRTT);
-  sprintf(data2, "%f", timeout);
-  printf("Data: %s\n %s\n", data1, data2);
-  
-  sendCalculations(f, data1, data2, 'E');
+  char data[MAXLEN] = "Valore del Timeout: ";
+  char dataTemp[MAXLEN] = ", Valore del RTT Stimato: ";
+  char toString[MAXLEN];
+  sprintf(toString, "%f", timeout);
+  strncat(data, &toString, MAXLEN);
+  strncat(data, &dataTemp, MAXLEN);
+  sprintf(toString, "%f", EstimatedRTT);
+  strncat(data, &toString, MAXLEN);
+
+  char* data2 = data;
+  return data2;
 }
 
-void idleRQ(FILE* f, int banda, int distanza, int dimensione){
+const char* idleRQ(int banda, int distanza, int dimensione){
 
   float Tix = 0; //tempo di trasmissione del frame
   float Tp = 0; //ritardo di propagazione
@@ -370,18 +352,21 @@ void idleRQ(FILE* f, int banda, int distanza, int dimensione){
 
   window = Tt * (float)banda;
 
-  char data1[20];
-  char data2[20];
-  printf("Risultato: %f\n%f\n", window, U);
+  char data[MAXLEN] = "Valore della finestra: ";
+  char dataTemp[MAXLEN] = ", Valore dell'efficenza del canale: ";
+  char toString[MAXLEN];
+  sprintf(toString, "%f", window);
+  strncat(data, &toString, MAXLEN);
+  strncat(data, &dataTemp, MAXLEN);
+  sprintf(toString, "%f", U);
+  strncat(data, &toString, MAXLEN);
 
-  sprintf(data1, "%f", window);
-  sprintf(data2, "%f", U);
-  printf("Data: %s\n%s\n", data1,data2);
+  char* data2 = data;
+  return data2;
   
-  sendCalculations(f, data1, data2, 'I');
-}*/
+}
 
-float throughput(FILE* f, int banda, char* protocollo){
+float throughput(int banda, char* protocollo){
 
   char* data;
 
@@ -392,8 +377,6 @@ float throughput(FILE* f, int banda, char* protocollo){
   float overheadTCP = 20;
   float overheadUDP = 8;
 
-  printf("banda: %d\n Protocollo: %s\n", banda, protocollo);
-
   if (strcmp(protocollo, "TCP") == 0) {
     //(1500 - 40)/(1500 + 18)
     throughput = (frameEthernet - (overheadTCP + overheadIp)) / (frameEthernet + overheadEthernet);
@@ -403,8 +386,6 @@ float throughput(FILE* f, int banda, char* protocollo){
     throughput = (frameEthernet - (overheadUDP + overheadIp)) / (frameEthernet + overheadEthernet);
     throughput = throughput * (float)banda;
   }
-  
-  printf("Risultato: %d\n", throughput);
 
   return throughput;
 }
