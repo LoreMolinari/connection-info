@@ -9,7 +9,7 @@
 #include <signal.h>
 #include "getRequest.h"
 
-#define PORT 9090
+#define PORT 7070
 #define LISTEN 5
 #define MAXLEN 2048
 #define MAX_LINE_LENGTH (1024)
