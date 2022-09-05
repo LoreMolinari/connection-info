@@ -116,7 +116,7 @@ void throughput(int clientdescriptor) {
             recv(clientdescriptor, &throughput, sizeof(float), 0);
             
             printf("Valore del throughput (in Mbps): ");
-            printf("%f\n", throughput);
+            printf("%.5f\n", throughput);
         } else {
             check = 0;
             printf("Scegliere un protocollo tra quelli indicati nel messaggio precedente.\n");
@@ -155,12 +155,12 @@ void idleRQ(int clientdescriptor) {
     //recezione del valore dell'efficienza di utilizzo calcolata 
     recv(clientdescriptor, &U, sizeof(float), 0);
     printf("Valore dell'efficienza di utilizzo: ");
-    printf("%f\n", U);
+    printf("%.5f\n", U);
 
     //recezione del valore della finestra ottimale calcolata
     recv(clientdescriptor, &window, sizeof(float), 0);
     printf("Valore della finestra ottimale: ");
-    printf("%f\n", window);
+    printf("%.5f\n", window);
 
     printf("Apri il tuo browser (http://localhost:9090) prima di procedere!\n");
 
@@ -187,7 +187,7 @@ void window(int clientdescriptor) {
     //acquisizione del valore della finestra ottimale calcolato in base ai parametri ricevuti
     recv(clientdescriptor, &window, sizeof(float), 0);
     printf("Valore della finestra ottimale: ");
-    printf("%f\n", window);
+    printf("%.5f\n", window);
 
     printf("Apri il tuo browser (http://localhost:9090) prima di procedere!\n");
 
@@ -214,12 +214,12 @@ void timeout(int clientdescriptor) {
     //acquisizione del valore dell'estimated RTT
     recv(clientdescriptor, &estimatedRTT, sizeof(float), 0);
     printf("Valore dell'estimated RTT: ");
-    printf("%f\n", estimatedRTT);
+    printf("%.5f\n", estimatedRTT);
 
     //acquisizione del valore del timeout calcolato 
     recv(clientdescriptor, &timeout, sizeof(float), 0);
     printf("Valore del timeout: ");
-    printf("%f\n", timeout);
+    printf("%.5f\n", timeout);
 
     printf("Apri il tuo browser (http://localhost:9090) prima di procedere!\n");
 

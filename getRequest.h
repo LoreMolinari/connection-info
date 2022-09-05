@@ -10,18 +10,19 @@ char* getRequest(FILE *f) {
     int exit = 0;
 
     if (f == NULL) die("getReqeuest() error.\n");
+    printf("\n\n");
 
     do {
         res = fgets(header_line, MAXLINE, f);
         if (res != NULL) {
-            printf("%s\n", res);
+            printf("%s", res);
             if (!choicheFound) {
                 choicheFound = searchReferer(res, response);
             }
         }
     } while (res != NULL && strcmp(header_line, "\r\n") != 0);
     
-    printf("%s\n", response);
+    //printf("%s\n", response);
     return response;
 }
 
