@@ -123,6 +123,8 @@ void throughput(int clientdescriptor) {
         }
     }
 
+    printf("Apri il tuo browser (http://localhost:9090) prima di procedere!\n");
+
 }
 
 
@@ -160,6 +162,8 @@ void idleRQ(int clientdescriptor) {
     printf("Valore della finestra ottimale: ");
     printf("%f\n", window);
 
+    printf("Apri il tuo browser (http://localhost:9090) prima di procedere!\n");
+
 }
 
 
@@ -184,6 +188,8 @@ void window(int clientdescriptor) {
     recv(clientdescriptor, &window, sizeof(float), 0);
     printf("Valore della finestra ottimale: ");
     printf("%f\n", window);
+
+    printf("Apri il tuo browser (http://localhost:9090) prima di procedere!\n");
 
 }
 
@@ -214,6 +220,8 @@ void timeout(int clientdescriptor) {
     recv(clientdescriptor, &timeout, sizeof(float), 0);
     printf("Valore del timeout: ");
     printf("%f\n", timeout);
+
+    printf("Apri il tuo browser (http://localhost:9090) prima di procedere!\n");
 
 }
 
