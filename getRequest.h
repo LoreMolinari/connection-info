@@ -14,14 +14,13 @@ char* getRequest(FILE *f) {
     do {
         res = fgets(header_line, MAXLINE, f);
         if (res != NULL) {
-            printf("%s\n", res);
+            printf("%s", res);
             if (!choicheFound) {
                 choicheFound = searchReferer(res, response);
             }
         }
     } while (res != NULL && strcmp(header_line, "\r\n") != 0);
     
-    printf("%s\n", response);
     return response;
 }
 

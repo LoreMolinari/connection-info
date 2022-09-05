@@ -284,7 +284,7 @@ void scanData(char* s, FILE*  f){
       //per stampare il risultato ottenuto usando il protocollo HTTP 1.1
       char data[MAXLEN] = "Valore del throughput: ";
       char toString[MAXLEN];
-      sprintf(toString, "%f", throughput(banda, secondo));
+      sprintf(toString, "%4.2f", throughput(banda, secondo));
       strncat(data, &toString, MAXLEN);
       free(secondo);
       sendResponse(f, "", data);
@@ -326,10 +326,10 @@ const char* timeout(int RTT, float EstimatedRTT){
   char data[MAXLEN] = "Valore del Timeout: ";
   char dataTemp[MAXLEN] = ", Valore del RTT Stimato: ";
   char toString[MAXLEN];
-  sprintf(toString, "%f", timeout);
+  sprintf(toString, "%4.2f", timeout);
   strncat(data, &toString, MAXLEN);
   strncat(data, &dataTemp, MAXLEN);
-  sprintf(toString, "%f", EstimatedRTT);
+  sprintf(toString, "%4.2f", EstimatedRTT);
   strncat(data, &toString, MAXLEN);
 
   char* data2 = data;
@@ -355,10 +355,10 @@ const char* idleRQ(int banda, int distanza, int dimensione){
   char data[MAXLEN] = "Valore della finestra: ";
   char dataTemp[MAXLEN] = ", Valore dell'efficenza del canale: ";
   char toString[MAXLEN];
-  sprintf(toString, "%f", window);
+  sprintf(toString, "%4.2f", window);
   strncat(data, &toString, MAXLEN);
   strncat(data, &dataTemp, MAXLEN);
-  sprintf(toString, "%f", U);
+  sprintf(toString, "%4.2f", U);
   strncat(data, &toString, MAXLEN);
 
   char* data2 = data;
